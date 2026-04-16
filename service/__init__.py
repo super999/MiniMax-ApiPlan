@@ -1,4 +1,4 @@
-from .minimax_service import MiniMaxService
-from .evaluation_service import EvaluationService
+from service.chat_service import ChatService
+from service.evaluation_service import EvaluationService
 
-__all__ = ["MiniMaxService", "EvaluationService"]
+__all__ = ["ChatService", "EvaluationService"]
