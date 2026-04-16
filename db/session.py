@@ -1,4 +1,5 @@
 from typing import AsyncGenerator, Optional
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     AsyncEngine,
@@ -78,7 +79,10 @@ async def close_db_pool() -> None:
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     if not is_database_configured():
         logger.warning("数据库未配置，无法获取会话")
-        raise RuntimeError("数据库未配置")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="用户系统需要配置 MySQL 数据库，请检查环境变量 DB_HOST、DB_USERNAME、DB_PASSWORD、DB_DATABASE",
+        )
 
     session_local = get_session_local()
     async with session_local() as session:

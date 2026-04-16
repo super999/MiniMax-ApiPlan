@@ -58,7 +58,7 @@ class DatabaseSettings(BaseSettings):
         )
 
     class Config:
-        env_prefix = "DB_"数据库未配置，无法获取会话
+        env_prefix = "DB_"
         extra = "ignore"
 
 
