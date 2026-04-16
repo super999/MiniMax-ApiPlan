@@ -7,6 +7,7 @@ class ChatRequest(BaseModel):
     model: Optional[str] = Field(default="abab6.5s-chat", description="使用的模型名称")
     temperature: Optional[float] = Field(default=0.7, ge=0.0, le=2.0, description="采样温度")
     max_tokens: Optional[int] = Field(default=2048, ge=1, le=8192, description="最大生成token数")
+    project_id: Optional[int] = Field(default=None, description="关联的项目ID")
 
     class Config:
         json_schema_extra = {
@@ -14,6 +15,7 @@ class ChatRequest(BaseModel):
                 "prompt": "你好，请介绍一下你自己",
                 "model": "abab6.5s-chat",
                 "temperature": 0.7,
-                "max_tokens": 2048
+                "max_tokens": 2048,
+                "project_id": 1
             }
         }

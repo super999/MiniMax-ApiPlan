@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
-from sqlalchemy import JSON, Integer, String, Text
+from sqlalchemy import ForeignKey, JSON, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.base import Base
@@ -28,6 +28,17 @@ class ChatLog(Base):
     error_msg: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     meta_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        index=True,
+        nullable=False,
+    )
+    project_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("projects.id"),
+        index=True,
+        nullable=True,
+    )
+
 
 class ChatLogBase(BaseModel):
     request_id: Optional[str] = Field(default=None, max_length=100)
@@ -43,6 +54,7 @@ class ChatLogBase(BaseModel):
     success: Optional[bool] = None
     error_msg: Optional[str] = None
     meta_data: Optional[dict] = None
+    project_id: Optional[int] = None
 
 
 class ChatLogCreate(ChatLogBase):
@@ -55,6 +67,8 @@ class ChatLogUpdate(ChatLogBase):
 
 class ChatLogResponse(ChatLogBase):
     id: int
+    user_id: int
+    project_id: Optional[int]
     created_at: datetime
     updated_at: datetime
     is_deleted: bool

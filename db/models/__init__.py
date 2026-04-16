@@ -1,4 +1,5 @@
 from db.models.chat_log import ChatLog, ChatLogCreate, ChatLogUpdate, ChatLogResponse
+from db.models.project import Project, ProjectCreate, ProjectUpdate, ProjectResponse
 from db.models.user import (
     User,
     UserBase,
@@ -15,6 +16,10 @@ __all__ = [
     "ChatLogCreate",
     "ChatLogUpdate",
     "ChatLogResponse",
+    "Project",
+    "ProjectCreate",
+    "ProjectUpdate",
+    "ProjectResponse",
     "User",
     "UserBase",
     "UserCreate",
