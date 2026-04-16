@@ -6,6 +6,10 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
+ENV_FILE = ".env"
+ENV_FILE_ENCODING = "utf-8"
+
+
 class AppSettings(BaseSettings):
     name: str = "MiniMax API Plan"
     version: str = "1.0.0"
@@ -14,6 +18,8 @@ class AppSettings(BaseSettings):
 
     class Config:
         env_prefix = "APP_"
+        env_file = ENV_FILE
+        env_file_encoding = ENV_FILE_ENCODING
         extra = "ignore"
 
 
@@ -33,6 +39,8 @@ class MiniMaxSettings(BaseSettings):
 
     class Config:
         env_prefix = "MINIMAX_"
+        env_file = ENV_FILE
+        env_file_encoding = ENV_FILE_ENCODING
         extra = "ignore"
 
 
@@ -59,6 +67,8 @@ class DatabaseSettings(BaseSettings):
 
     class Config:
         env_prefix = "DB_"
+        env_file = ENV_FILE
+        env_file_encoding = ENV_FILE_ENCODING
         extra = "ignore"
 
 
@@ -68,6 +78,8 @@ class EvaluationSettings(BaseSettings):
 
     class Config:
         env_prefix = "EVALUATION_"
+        env_file = ENV_FILE
+        env_file_encoding = ENV_FILE_ENCODING
         extra = "ignore"
 
 
@@ -82,6 +94,8 @@ class JWTSettings(BaseSettings):
 
     class Config:
         env_prefix = "JWT_"
+        env_file = ENV_FILE
+        env_file_encoding = ENV_FILE_ENCODING
         extra = "ignore"
 
 
@@ -93,8 +107,8 @@ class Settings(BaseSettings):
     jwt: JWTSettings = Field(default_factory=JWTSettings)
 
     class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+        env_file = ENV_FILE
+        env_file_encoding = ENV_FILE_ENCODING
         extra = "ignore"
 
 
