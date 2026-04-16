@@ -25,9 +25,10 @@ async def get_minimax_client() -> Optional[MiniMaxClient]:
 
 async def get_db_session_dependency() -> Optional[AsyncSession]:
     if not is_database_configured():
-        return None
-    async for session in get_async_session():
-        yield session
+        yield None
+    else:
+        async for session in get_async_session():
+            yield session
 
 
 async def get_chat_service(
