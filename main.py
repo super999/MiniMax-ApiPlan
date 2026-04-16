@@ -30,7 +30,7 @@ else:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app_logger.info(f"===== {settings.app.app_name} 服务启动中 =====")
+    app_logger.info(f"===== {settings.app.name} 服务启动中 =====")
     app_logger.info(f"版本: {settings.app.version}")
     app_logger.info(f"工作目录: {os.getcwd()}")
 
@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=settings.app.app_name,
+    title=settings.app.name,
     description="基于 FastAPI 的 MiniMax API 调用服务，支持智能体代码评测",
     version=settings.app.version,
     lifespan=lifespan,
