@@ -5,8 +5,8 @@ from pydantic_settings import BaseSettings
 
 
 class AppSettings(BaseSettings):
-    app_name: str = "MiniMax API Plan"
-    app_version: str = "1.0.0"
+    name: str = "MiniMax API Plan"
+    version: str = "1.0.0"
     debug: bool = False
     allowed_origins: list[str] = ["*"]
 
