@@ -1,3 +1,5 @@
+import secrets
+from datetime import timedelta
 from functools import lru_cache
 from typing import Optional
 from pydantic import Field, field_validator
@@ -56,7 +58,7 @@ class DatabaseSettings(BaseSettings):
         )
 
     class Config:
-        env_prefix = "DB_"
+        env_prefix = "DB_"数据库未配置，无法获取会话
         extra = "ignore"
 
 
@@ -69,11 +71,26 @@ class EvaluationSettings(BaseSettings):
         extra = "ignore"
 
 
+class JWTSettings(BaseSettings):
+    secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24
+
+    @property
+    def access_token_expire_delta(self) -> timedelta:
+        return timedelta(minutes=self.access_token_expire_minutes)
+
+    class Config:
+        env_prefix = "JWT_"
+        extra = "ignore"
+
+
 class Settings(BaseSettings):
     app: AppSettings = Field(default_factory=AppSettings)
     minimax: MiniMaxSettings = Field(default_factory=MiniMaxSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings)
+    jwt: JWTSettings = Field(default_factory=JWTSettings)
 
     class Config:
         env_file = ".env"

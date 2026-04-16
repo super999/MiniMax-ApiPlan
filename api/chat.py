@@ -4,7 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.logger import get_logger
 from core.settings import settings
+from core.deps import get_current_user
 from db.session import get_async_session, is_database_configured
+from db.models.user import User
 from schemas.request import ChatRequest
 from schemas.response import ChatResponse
 from service.chat_service import ChatService
@@ -50,12 +52,14 @@ async def get_chat_service(
     responses={
         200: {"description": "请求成功"},
         400: {"description": "请求参数错误"},
+        401: {"description": "未授权，请先登录"},
         503: {"description": "服务不可用（API 未配置）"},
     },
 )
 async def chat(
     request: ChatRequest,
     service: ChatService = Depends(get_chat_service),
+    current_user: User = Depends(get_current_user),
 ) -> ChatResponse:
     logger.info(f"收到聊天请求，prompt 长度: {len(request.prompt)}")
 
@@ -86,6 +90,7 @@ async def chat(
 async def chat_with_evaluation(
     request: ChatRequest,
     service: ChatService = Depends(get_chat_service),
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     logger.info(f"收到带评测的聊天请求，prompt 长度: {len(request.prompt)}")
 
