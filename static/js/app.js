@@ -1,3 +1,5 @@
+let modelConfig = null;
+
 document.addEventListener('DOMContentLoaded', function() {
     const sendBtn = document.getElementById('sendBtn');
     const promptTextarea = document.getElementById('prompt');
@@ -6,6 +8,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const infoContentDiv = document.getElementById('info-content');
 
     let isLoading = false;
+
+    async function loadConfig() {
+        try {
+            const response = await fetch('/static/config/model_config.json');
+            if (!response.ok) {
+                throw new Error(`配置文件加载失败: ${response.status}`);
+            }
+            modelConfig = await response.json();
+            initializeFormWithConfig();
+        } catch (error) {
+            console.error('加载配置文件失败:', error);
+        }
+    }
+
+    function initializeFormWithConfig() {
+        if (!modelConfig) return;
+
+        const modelSelect = document.getElementById('model');
+        const temperatureInput = document.getElementById('temperature');
+        const maxTokensInput = document.getElementById('max_tokens');
+
+        modelSelect.innerHTML = '';
+        modelConfig.models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.value;
+            option.textContent = model.label;
+            if (model.default) {
+                option.selected = true;
+            }
+            modelSelect.appendChild(option);
+        });
+
+        const tempParams = modelConfig.parameters.temperature;
+        temperatureInput.min = tempParams.min;
+        temperatureInput.max = tempParams.max;
+        temperatureInput.step = tempParams.step;
+        temperatureInput.value = tempParams.default;
+
+        const maxTokensParams = modelConfig.parameters.max_tokens;
+        maxTokensInput.min = maxTokensParams.min;
+        maxTokensInput.max = maxTokensParams.max;
+        maxTokensInput.value = maxTokensParams.default;
+    }
+
+    loadConfig();
 
     function showLoading() {
         isLoading = true;
@@ -87,12 +134,16 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('请输入 Prompt');
             return false;
         }
-        if (data.temperature < 0 || data.temperature > 2) {
-            alert('Temperature 必须在 0-2 之间');
+
+        const tempParams = modelConfig ? modelConfig.parameters.temperature : { min: 0, max: 2 };
+        const maxTokensParams = modelConfig ? modelConfig.parameters.max_tokens : { min: 1, max: 8192 };
+
+        if (data.temperature < tempParams.min || data.temperature > tempParams.max) {
+            alert(`Temperature 必须在 ${tempParams.min}-${tempParams.max} 之间`);
             return false;
         }
-        if (data.max_tokens < 1 || data.max_tokens > 8192) {
-            alert('Max Tokens 必须在 1-8192 之间');
+        if (data.max_tokens < maxTokensParams.min || data.max_tokens > maxTokensParams.max) {
+            alert(`Max Tokens 必须在 ${maxTokensParams.min}-${maxTokensParams.max} 之间`);
             return false;
         }
         return true;
