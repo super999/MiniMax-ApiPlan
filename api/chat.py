@@ -64,7 +64,7 @@ async def chat(
     logger.info(f"收到聊天请求，prompt 长度: {len(request.prompt)}")
 
     try:
-        response = await service.chat(request)
+        response = await service.chat(request, user_id=current_user.id)
 
         if not response.success:
             logger.warning(f"聊天请求失败: {response.error_msg}")
@@ -95,7 +95,7 @@ async def chat_with_evaluation(
     logger.info(f"收到带评测的聊天请求，prompt 长度: {len(request.prompt)}")
 
     try:
-        result = await service.chat_with_evaluation(request)
+        result = await service.chat_with_evaluation(request, user_id=current_user.id)
         return result
 
     except HTTPException:

@@ -14,6 +14,7 @@ from db.session import create_tables, close_db_pool, is_database_configured
 from api.chat import router as chat_router
 from api.health import router as health_router
 from api.auth import router as auth_router
+from api.project import router as project_router
 
 logger = setup_logger()
 app_logger = get_logger(__name__)
@@ -80,6 +81,7 @@ app.add_middleware(
 app.include_router(chat_router)
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(project_router)
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

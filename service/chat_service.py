@@ -9,6 +9,7 @@ from clients.minimax_client import (
 from core.logger import get_logger
 from core.settings import settings
 from db.crud.chat_log import chat_log_crud
+from db.crud.project import project_crud
 from db.models.chat_log import ChatLogCreate
 from schemas.request import ChatRequest
 from schemas.response import ChatResponse, MiniMaxUsage
@@ -66,10 +67,29 @@ class ChatService:
             latency_ms=round(latency_ms, 2),
         )
 
+    async def _validate_project(
+        self,
+        user_id: int,
+        project_id: Optional[int],
+    ) -> bool:
+        if project_id is None:
+            return True
+
+        if self._db_session is None:
+            return False
+
+        project = await project_crud.get_by_id(
+            self._db_session,
+            id=project_id,
+            user_id=user_id,
+        )
+        return project is not None
+
     async def _log_to_database(
         self,
         request: ChatRequest,
         response: ChatResponse,
+        user_id: int,
     ) -> None:
         if self._db_session is None:
             return
@@ -89,15 +109,29 @@ class ChatService:
                 success=response.success,
                 error_msg=response.error_msg,
                 meta_data=None,
+                project_id=request.project_id,
             )
-            await chat_log_crud.create(self._db_session, log_entry)
+            await chat_log_crud.create(self._db_session, log_entry, user_id=user_id)
         except Exception as e:
             logger.error(f"记录聊天日志到数据库失败: {str(e)}", exc_info=True)
 
-    async def chat(self, request: ChatRequest) -> ChatResponse:
+    async def chat(
+        self,
+        request: ChatRequest,
+        user_id: Optional[int] = None,
+    ) -> ChatResponse:
         client = self._get_client()
 
         logger.info(f"处理聊天请求，prompt 长度: {len(request.prompt)}")
+
+        if user_id is not None and request.project_id is not None:
+            is_valid_project = await self._validate_project(user_id, request.project_id)
+            if not is_valid_project:
+                return ChatResponse(
+                    success=False,
+                    error_msg=f"项目 ID {request.project_id} 不存在或无权限访问",
+                    latency_ms=0,
+                )
 
         response_data, error, latency_ms = await client.chat(
             prompt=request.prompt,
@@ -120,17 +154,18 @@ class ChatService:
         else:
             logger.warning(f"聊天请求失败: {response.error_msg}")
 
-        if self._db_session is not None:
-            await self._log_to_database(request, response)
+        if self._db_session is not None and user_id is not None:
+            await self._log_to_database(request, response, user_id)
 
         return response
 
     async def chat_with_evaluation(
         self,
         request: ChatRequest,
+        user_id: Optional[int] = None,
         evaluation_service: Optional[Any] = None,
     ) -> dict[str, Any]:
-        chat_response = await self.chat(request)
+        chat_response = await self.chat(request, user_id=user_id)
 
         result = {
             "chat_response": chat_response,
