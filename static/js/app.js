@@ -3,6 +3,190 @@ let currentUser = null;
 let currentPage = 'dashboard';
 const TOKEN_KEY = 'auth_token';
 
+const TOAST_CONFIG = {
+    duration: 3000,
+    autoClose: true,
+    maxToasts: 5
+};
+
+const TOAST_ICONS = {
+    success: '✓',
+    error: '✕',
+    warning: '⚠',
+    info: 'ℹ'
+};
+
+let confirmDialogResolver = null;
+
+function showToast(type, title, message, options = {}) {
+    const container = document.getElementById('toast-container');
+    if (!container) return null;
+
+    const config = { ...TOAST_CONFIG, ...options };
+    
+    while (container.children.length >= config.maxToasts) {
+        const oldestToast = container.firstElementChild;
+        if (oldestToast) {
+            removeToast(oldestToast);
+        }
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <div class="toast-content">
+            <div class="toast-title">${escapeHtml(title)}</div>
+            ${message ? `<div class="toast-message">${escapeHtml(message)}</div>` : ''}
+        </div>
+        <button class="toast-close" aria-label="关闭">×</button>
+    `;
+
+    container.appendChild(toast);
+
+    const closeBtn = toast.querySelector('.toast-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => removeToast(toast));
+    }
+
+    if (config.autoClose) {
+        const timeoutId = setTimeout(() => {
+            removeToast(toast);
+        }, config.duration);
+        
+        toast.addEventListener('mouseenter', () => {
+            clearTimeout(timeoutId);
+        });
+        
+        toast.addEventListener('mouseleave', () => {
+            setTimeout(() => {
+                removeToast(toast);
+            }, config.duration);
+        });
+    }
+
+    return toast;
+}
+
+function removeToast(toast) {
+    if (!toast || toast.classList.contains('hiding')) return;
+    
+    toast.classList.add('hiding');
+    
+    toast.addEventListener('animationend', () => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, { once: true });
+}
+
+function showSuccess(title, message) {
+    return showToast('success', title, message);
+}
+
+function showError(title, message) {
+    return showToast('error', title, message);
+}
+
+function showWarning(title, message) {
+    return showToast('warning', title, message);
+}
+
+function showInfo(title, message) {
+    return showToast('info', title, message);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showConfirmDialog(options) {
+    return new Promise((resolve) => {
+        const dialog = document.getElementById('confirm-dialog');
+        const iconEl = document.getElementById('confirm-dialog-icon');
+        const titleEl = document.getElementById('confirm-dialog-title');
+        const messageEl = document.getElementById('confirm-dialog-message');
+        const cancelBtn = document.getElementById('confirm-dialog-cancel');
+        const confirmBtn = document.getElementById('confirm-dialog-confirm');
+
+        if (!dialog || !iconEl || !titleEl || !messageEl || !cancelBtn || !confirmBtn) {
+            console.error('Confirm dialog elements not found');
+            resolve(false);
+            return;
+        }
+
+        const config = {
+            title: options.title || '确认操作',
+            message: options.message || '确定要执行此操作吗？',
+            icon: options.icon || 'warning',
+            confirmText: options.confirmText || '确定',
+            cancelText: options.cancelText || '取消',
+            type: options.type || 'warning'
+        };
+
+        iconEl.className = `confirm-dialog-icon ${config.type}`;
+        iconEl.textContent = config.icon === 'warning' ? '⚠️' : config.icon === 'danger' ? '🗑️' : 'ℹ️';
+        titleEl.textContent = config.title;
+        messageEl.textContent = config.message;
+        cancelBtn.textContent = config.cancelText;
+        confirmBtn.textContent = config.confirmText;
+
+        confirmBtn.className = 'btn-primary';
+        if (config.type === 'danger') {
+            confirmBtn.classList.add('danger');
+        }
+
+        confirmDialogResolver = resolve;
+
+        const handleConfirm = () => {
+            closeConfirmDialog();
+            resolve(true);
+        };
+
+        const handleCancel = () => {
+            closeConfirmDialog();
+            resolve(false);
+        };
+
+        const handleKeydown = (e) => {
+            if (e.key === 'Escape') {
+                handleCancel();
+                document.removeEventListener('keydown', handleKeydown);
+            } else if (e.key === 'Enter') {
+                handleConfirm();
+                document.removeEventListener('keydown', handleKeydown);
+            }
+        };
+
+        confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+        cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+
+        const newConfirmBtn = document.getElementById('confirm-dialog-confirm');
+        const newCancelBtn = document.getElementById('confirm-dialog-cancel');
+
+        newConfirmBtn.addEventListener('click', handleConfirm);
+        newCancelBtn.addEventListener('click', handleCancel);
+        document.addEventListener('keydown', handleKeydown);
+
+        dialog.style.display = 'flex';
+        newConfirmBtn.focus();
+    });
+}
+
+function closeConfirmDialog() {
+    const dialog = document.getElementById('confirm-dialog');
+    if (dialog) {
+        dialog.style.display = 'none';
+    }
+    confirmDialogResolver = null;
+}
+
 const PAGE_TITLES = {
     dashboard: '项目总览',
     script: '脚本工坊',
@@ -512,7 +696,7 @@ function getDebugFormData() {
 
 function validateDebugForm(data) {
     if (!data.prompt) {
-        alert('请输入 Prompt');
+        showError('输入错误', '请输入 Prompt');
         return false;
     }
 
@@ -520,11 +704,11 @@ function validateDebugForm(data) {
     const maxTokensParams = modelConfig ? modelConfig.parameters.max_tokens : { min: 1, max: 8192 };
 
     if (data.temperature < tempParams.min || data.temperature > tempParams.max) {
-        alert(`Temperature 必须在 ${tempParams.min}-${tempParams.max} 之间`);
+        showError('参数错误', `Temperature 必须在 ${tempParams.min}-${tempParams.max} 之间`);
         return false;
     }
     if (data.max_tokens < maxTokensParams.min || data.max_tokens > maxTokensParams.max) {
-        alert(`Max Tokens 必须在 ${maxTokensParams.min}-${maxTokensParams.max} 之间`);
+        showError('参数错误', `Max Tokens 必须在 ${maxTokensParams.min}-${maxTokensParams.max} 之间`);
         return false;
     }
     return true;
@@ -812,7 +996,15 @@ function handleEditProject(project) {
 }
 
 async function handleDeleteProject(project) {
-    if (!confirm(`确定要删除项目 "${project.name}" 吗？`)) {
+    const confirmed = await showConfirmDialog({
+        title: '确认删除',
+        message: `确定要删除项目 "${project.name}" 吗？此操作无法撤销。`,
+        type: 'danger',
+        confirmText: '删除',
+        cancelText: '取消'
+    });
+
+    if (!confirmed) {
         return;
     }
 
@@ -829,15 +1021,15 @@ async function handleDeleteProject(project) {
 
         if (response.ok) {
             const data = await response.json();
-            alert(data.message || '项目删除成功');
+            showSuccess('操作成功', data.message || '项目删除成功');
             loadUserProjects();
         } else {
             const errorData = await response.json().catch(() => ({}));
-            alert(errorData.detail || '删除项目失败');
+            showError('操作失败', errorData.detail || '删除项目失败');
         }
     } catch (error) {
         console.error('删除项目失败:', error);
-        alert('删除项目失败，请稍后重试');
+        showError('操作失败', '删除项目失败，请稍后重试');
     }
 }
 
