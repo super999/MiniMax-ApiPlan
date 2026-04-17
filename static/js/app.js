@@ -97,6 +97,7 @@ function showWorkspace() {
     updateUserInfo();
     bindWorkspaceEvents();
     navigateTo('dashboard');
+    loadUserProjects();
 }
 
 function updateUserInfo() {
@@ -203,6 +204,7 @@ function bindWorkspaceEvents() {
     }
 
     bindDebugPageEvents();
+    bindDashboardEvents();
 }
 
 function bindDebugPageEvents() {
@@ -676,5 +678,330 @@ async function sendDebugRequest() {
         showDebugError(`请求失败: ${error.message}`);
     } finally {
         hideDebugLoading();
+    }
+}
+
+async function loadUserProjects() {
+    const token = getStoredToken();
+    if (!token) return;
+
+    try {
+        const response = await fetch('/api/projects', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const projects = await response.json();
+            renderProjects(projects);
+            updateProjectStats(projects.length);
+        } else if (response.status === 401) {
+            clearStoredToken();
+            currentUser = null;
+            showLandingPage();
+            openModal('login');
+        }
+    } catch (error) {
+        console.error('加载项目列表失败:', error);
+        renderProjects([]);
+    }
+}
+
+function renderProjects(projects) {
+    const emptyState = document.getElementById('projects-empty-state');
+    const projectsList = document.getElementById('projects-list');
+
+    if (!emptyState || !projectsList) return;
+
+    if (projects.length === 0) {
+        emptyState.style.display = 'flex';
+        projectsList.style.display = 'none';
+    } else {
+        emptyState.style.display = 'none';
+        projectsList.style.display = 'grid';
+        
+        projectsList.innerHTML = '';
+        projects.forEach(project => {
+            const projectCard = createProjectCard(project);
+            projectsList.appendChild(projectCard);
+        });
+    }
+}
+
+function createProjectCard(project) {
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    card.dataset.projectId = project.id;
+
+    const statusLabels = {
+        'planning': '规划中',
+        'active': '进行中',
+        'completed': '已完成'
+    };
+
+    const statusClasses = {
+        'planning': 'planning',
+        'active': 'active',
+        'completed': 'completed'
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '未知';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('zh-CN');
+    };
+
+    card.innerHTML = `
+        <div class="project-card-header">
+            <div class="project-icon">📁</div>
+            <span class="project-status-badge ${statusClasses[project.status] || 'planning'}">
+                ${statusLabels[project.status] || '规划中'}
+            </span>
+        </div>
+        <h4>${project.name}</h4>
+        <p class="project-description">${project.description || '暂无描述'}</p>
+        <div class="project-footer">
+            <span>创建于: ${formatDate(project.created_at)}</span>
+            <div class="project-actions">
+                <button class="project-action-btn" title="编辑">✏️</button>
+                <button class="project-action-btn delete" title="删除">🗑️</button>
+            </div>
+        </div>
+    `;
+
+    card.addEventListener('click', function(e) {
+        if (e.target.closest('.project-action-btn')) {
+            return;
+        }
+        handleProjectClick(project);
+    });
+
+    const editBtn = card.querySelector('.project-action-btn:not(.delete)');
+    if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleEditProject(project);
+        });
+    }
+
+    const deleteBtn = card.querySelector('.project-action-btn.delete');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleDeleteProject(project);
+        });
+    }
+
+    return card;
+}
+
+function updateProjectStats(count) {
+    const statProjects = document.getElementById('stat-projects');
+    if (statProjects) {
+        statProjects.textContent = count;
+    }
+}
+
+function handleProjectClick(project) {
+    console.log('点击项目:', project);
+}
+
+function handleEditProject(project) {
+    console.log('编辑项目:', project);
+}
+
+async function handleDeleteProject(project) {
+    if (!confirm(`确定要删除项目 "${project.name}" 吗？`)) {
+        return;
+    }
+
+    const token = getStoredToken();
+    if (!token) return;
+
+    try {
+        const response = await fetch(`/api/projects/${project.id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            alert(data.message || '项目删除成功');
+            loadUserProjects();
+        } else {
+            const errorData = await response.json().catch(() => ({}));
+            alert(errorData.detail || '删除项目失败');
+        }
+    } catch (error) {
+        console.error('删除项目失败:', error);
+        alert('删除项目失败，请稍后重试');
+    }
+}
+
+function openCreateProjectModal() {
+    const modal = document.getElementById('create-project-modal');
+    const overlay = document.getElementById('modal-overlay');
+    
+    if (modal) {
+        modal.style.display = 'block';
+        const projectName = document.getElementById('project-name');
+        if (projectName) projectName.focus();
+    }
+    if (overlay) {
+        overlay.style.display = 'block';
+    }
+    
+    clearCreateProjectForm();
+}
+
+function closeCreateProjectModal() {
+    const modal = document.getElementById('create-project-modal');
+    const overlay = document.getElementById('modal-overlay');
+    
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    
+    clearCreateProjectForm();
+}
+
+function clearCreateProjectForm() {
+    const form = document.getElementById('create-project-form');
+    const errorDiv = document.getElementById('create-project-error');
+    
+    if (form) {
+        form.reset();
+    }
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+    }
+}
+
+function showCreateProjectError(message) {
+    const errorDiv = document.getElementById('create-project-error');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+}
+
+async function handleCreateProject(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('project-name')?.value.trim();
+    const description = document.getElementById('project-description')?.value.trim();
+    const status = document.getElementById('project-status')?.value;
+    
+    if (!name) {
+        showCreateProjectError('请输入项目名称');
+        return;
+    }
+    
+    if (name.length > 100) {
+        showCreateProjectError('项目名称不能超过100个字符');
+        return;
+    }
+    
+    const token = getStoredToken();
+    if (!token) {
+        closeCreateProjectModal();
+        showLandingPage();
+        openModal('login');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('create-project-btn');
+    const originalText = submitBtn.textContent;
+    
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '创建中...';
+        }
+        
+        const requestData = {
+            name: name,
+            status: status || 'planning'
+        };
+        
+        if (description) {
+            requestData.description = description;
+        }
+        
+        const response = await fetch('/api/projects', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            closeCreateProjectModal();
+            alert('项目创建成功！');
+            loadUserProjects();
+        } else {
+            showCreateProjectError(data.detail || '创建项目失败，请重试');
+        }
+    } catch (error) {
+        console.error('创建项目失败:', error);
+        showCreateProjectError('网络错误，请稍后重试');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    }
+}
+
+function bindDashboardEvents() {
+    const quickCreateProject = document.getElementById('quick-create-project');
+    if (quickCreateProject) {
+        quickCreateProject.addEventListener('click', openCreateProjectModal);
+    }
+    
+    const headerCreateProject = document.getElementById('header-create-project');
+    if (headerCreateProject) {
+        headerCreateProject.addEventListener('click', openCreateProjectModal);
+    }
+    
+    const emptyCreateProject = document.getElementById('empty-create-project');
+    if (emptyCreateProject) {
+        emptyCreateProject.addEventListener('click', openCreateProjectModal);
+    }
+    
+    const closeCreateProject = document.getElementById('close-create-project');
+    if (closeCreateProject) {
+        closeCreateProject.addEventListener('click', closeCreateProjectModal);
+    }
+    
+    const createProjectForm = document.getElementById('create-project-form');
+    if (createProjectForm) {
+        createProjectForm.addEventListener('submit', handleCreateProject);
+    }
+    
+    const quickScriptWorkshop = document.getElementById('quick-script-workshop');
+    if (quickScriptWorkshop) {
+        quickScriptWorkshop.addEventListener('click', () => navigateTo('script'));
+    }
+    
+    const quickVisualWorkshop = document.getElementById('quick-visual-workshop');
+    if (quickVisualWorkshop) {
+        quickVisualWorkshop.addEventListener('click', () => navigateTo('visual'));
+    }
+    
+    const quickVoiceLab = document.getElementById('quick-voice-lab');
+    if (quickVoiceLab) {
+        quickVoiceLab.addEventListener('click', () => navigateTo('voice'));
     }
 }
