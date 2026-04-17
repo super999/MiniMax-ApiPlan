@@ -13,5 +13,3 @@ const StorageService = {
         localStorage.removeItem(TOKEN_KEY);
     }
 };
-
-export { StorageService, TOKEN_KEY };

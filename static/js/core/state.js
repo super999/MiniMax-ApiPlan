@@ -27,5 +27,3 @@ const PAGE_TITLES = {
     debug: '调试台',
     admin: '管理员后台'
 };
-
-export { AppState, PAGE_TITLES };

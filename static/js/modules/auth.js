@@ -1,9 +1,3 @@
-import { AppState } from '../core/state.js';
-import { StorageService } from '../services/storage.js';
-import { ApiService } from '../services/api.js';
-import { showError, showFormError } from '../components/toast.js';
-import { closeAllModals, showFormError as showModalFormError } from '../components/modal.js';
-
 const AuthModule = {
     async checkStatus() {
         const token = StorageService.getToken();
@@ -35,8 +29,8 @@ const AuthModule = {
         const password = document.getElementById('login-password')?.value;
 
         if (!username || !password) {
-            showModalFormError('login', '请输入用户名和密码');
-            return;
+            showFormError('login', '请输入用户名和密码');
+            return false;
         }
 
         try {
@@ -50,12 +44,12 @@ const AuthModule = {
                 closeAllModals();
                 return true;
             } else {
-                showModalFormError('login', data.detail || '登录失败，请检查用户名和密码');
+                showFormError('login', data.detail || '登录失败，请检查用户名和密码');
                 return false;
             }
         } catch (error) {
             console.error('登录请求失败:', error);
-            showModalFormError('login', '网络错误，请稍后重试');
+            showFormError('login', '网络错误，请稍后重试');
             return false;
         }
     },
@@ -69,22 +63,22 @@ const AuthModule = {
         const confirmPassword = document.getElementById('register-confirm-password')?.value;
 
         if (!username || !password) {
-            showModalFormError('register', '请填写用户名和密码');
+            showFormError('register', '请填写用户名和密码');
             return false;
         }
 
         if (password !== confirmPassword) {
-            showModalFormError('register', '两次输入的密码不一致');
+            showFormError('register', '两次输入的密码不一致');
             return false;
         }
 
         if (password.length < 6) {
-            showModalFormError('register', '密码长度至少为6个字符');
+            showFormError('register', '密码长度至少为6个字符');
             return false;
         }
 
         if (username.length < 3) {
-            showModalFormError('register', '用户名长度至少为3个字符');
+            showFormError('register', '用户名长度至少为3个字符');
             return false;
         }
 
@@ -116,12 +110,12 @@ const AuthModule = {
                     return 'login';
                 }
             } else {
-                showModalFormError('register', data.detail || '注册失败，请重试');
+                showFormError('register', data.detail || '注册失败，请重试');
                 return false;
             }
         } catch (error) {
             console.error('注册请求失败:', error);
-            showModalFormError('register', '网络错误，请稍后重试');
+            showFormError('register', '网络错误，请稍后重试');
             return false;
         }
     },
@@ -163,5 +157,3 @@ const AuthModule = {
         }
     }
 };
-
-export { AuthModule };

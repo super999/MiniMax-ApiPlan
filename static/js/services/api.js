@@ -1,5 +1,3 @@
-import { StorageService } from './storage.js';
-
 const ApiService = {
     async request(endpoint, options = {}) {
         const token = StorageService.getToken();
@@ -35,5 +33,3 @@ const ApiService = {
         return this.request(endpoint, { method: 'DELETE' });
     }
 };
-
-export { ApiService };

@@ -80,5 +80,3 @@ function closeConfirmDialog() {
     }
     confirmDialogResolver = null;
 }
-
-export { showConfirmDialog, closeConfirmDialog };
