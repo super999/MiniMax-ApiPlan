@@ -1140,7 +1140,7 @@ async function handleCreateProject(e) {
         
         if (response.ok) {
             closeCreateProjectModal();
-            alert('项目创建成功！');
+            showSuccess('操作成功', '项目创建成功！');
             loadUserProjects();
         } else {
             showCreateProjectError(data.detail || '创建项目失败，请重试');
