@@ -1,6 +1,17 @@
 let modelConfig = null;
 let currentUser = null;
+let currentPage = 'dashboard';
 const TOKEN_KEY = 'auth_token';
+
+const PAGE_TITLES = {
+    dashboard: '项目总览',
+    script: '脚本工坊',
+    visual: '视觉工坊',
+    voice: '配音实验室',
+    tasks: '任务中心',
+    debug: '调试台',
+    admin: '管理员后台'
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
@@ -11,11 +22,11 @@ async function initializeApp() {
     if (token) {
         await checkAuthStatus();
     } else {
-        showNotAuthenticated();
+        showLandingPage();
     }
 
     await loadConfig();
-    bindEvents();
+    bindGlobalEvents();
 }
 
 function getStoredToken() {
@@ -33,7 +44,7 @@ function clearStoredToken() {
 async function checkAuthStatus() {
     const token = getStoredToken();
     if (!token) {
-        showNotAuthenticated();
+        showLandingPage();
         return;
     }
 
@@ -46,87 +57,210 @@ async function checkAuthStatus() {
 
         if (response.ok) {
             currentUser = await response.json();
-            showAuthenticated();
+            showWorkspace();
         } else {
             clearStoredToken();
-            showNotAuthenticated();
+            showLandingPage();
         }
     } catch (error) {
         console.error('检查认证状态失败:', error);
         clearStoredToken();
-        showNotAuthenticated();
+        showLandingPage();
     }
 }
 
-function showAuthenticated() {
-    const authStatusDiv = document.getElementById('auth-status');
-    const loginPromptDiv = document.getElementById('login-prompt');
-    const chatSectionDiv = document.getElementById('chat-section');
+function showLandingPage() {
+    const landingPage = document.getElementById('landing-page');
+    const workspacePage = document.getElementById('workspace-page');
 
-    authStatusDiv.innerHTML = `
-        <div class="user-info">
-            <span class="username">${currentUser.username}</span>
-            <button id="logout-btn" class="btn-logout">退出登录</button>
-        </div>
-    `;
+    if (landingPage) {
+        landingPage.style.display = 'block';
+    }
+    if (workspacePage) {
+        workspacePage.style.display = 'none';
+    }
 
-    loginPromptDiv.style.display = 'none';
-    chatSectionDiv.style.display = 'grid';
-
-    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    bindLandingEvents();
 }
 
-function showNotAuthenticated() {
-    const authStatusDiv = document.getElementById('auth-status');
-    const loginPromptDiv = document.getElementById('login-prompt');
-    const chatSectionDiv = document.getElementById('chat-section');
+function showWorkspace() {
+    const landingPage = document.getElementById('landing-page');
+    const workspacePage = document.getElementById('workspace-page');
 
-    authStatusDiv.innerHTML = `
-        <button id="header-login-btn" class="btn-login">登录</button>
-        <button id="header-register-btn" class="btn-register">注册</button>
-    `;
+    if (landingPage) {
+        landingPage.style.display = 'none';
+    }
+    if (workspacePage) {
+        workspacePage.style.display = 'flex';
+    }
 
-    loginPromptDiv.style.display = 'flex';
-    chatSectionDiv.style.display = 'none';
-
-    document.getElementById('header-login-btn').addEventListener('click', () => openModal('login'));
-    document.getElementById('header-register-btn').addEventListener('click', () => openModal('register'));
+    updateUserInfo();
+    bindWorkspaceEvents();
+    navigateTo('dashboard');
 }
 
-function bindEvents() {
-    document.getElementById('show-login-btn').addEventListener('click', () => openModal('login'));
-    document.getElementById('show-register-btn').addEventListener('click', () => openModal('register'));
+function updateUserInfo() {
+    if (!currentUser) return;
 
-    document.getElementById('switch-to-register').addEventListener('click', (e) => {
-        e.preventDefault();
-        switchModal('register');
-    });
-    document.getElementById('switch-to-login').addEventListener('click', (e) => {
-        e.preventDefault();
-        switchModal('login');
-    });
+    const welcomeUsername = document.getElementById('welcome-username');
+    const userAvatar = document.getElementById('user-avatar');
+    const userNameSidebar = document.getElementById('user-name-sidebar');
+    const userRoleSidebar = document.getElementById('user-role-sidebar');
 
+    if (welcomeUsername) {
+        welcomeUsername.textContent = currentUser.username;
+    }
+    if (userAvatar) {
+        userAvatar.textContent = currentUser.username.charAt(0).toUpperCase();
+    }
+    if (userNameSidebar) {
+        userNameSidebar.textContent = currentUser.username;
+    }
+    if (userRoleSidebar) {
+        userRoleSidebar.textContent = currentUser.is_admin ? '管理员' : '普通用户';
+    }
+}
+
+function bindGlobalEvents() {
     document.querySelectorAll('.modal-close').forEach(btn => {
         btn.addEventListener('click', closeAllModals);
     });
-    document.getElementById('modal-overlay').addEventListener('click', closeAllModals);
-
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
-    document.getElementById('register-form').addEventListener('submit', handleRegister);
-
-    const sendBtn = document.getElementById('sendBtn');
-    if (sendBtn) {
-        sendBtn.addEventListener('click', sendRequest);
+    const modalOverlay = document.getElementById('modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', closeAllModals);
     }
 
-    const promptTextarea = document.getElementById('prompt');
-    if (promptTextarea) {
-        promptTextarea.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                sendRequest();
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+
+    const registerForm = document.getElementById('register-form');
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegister);
+    }
+
+    const switchToRegister = document.getElementById('switch-to-register');
+    if (switchToRegister) {
+        switchToRegister.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchModal('register');
+        });
+    }
+
+    const switchToLogin = document.getElementById('switch-to-login');
+    if (switchToLogin) {
+        switchToLogin.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchModal('login');
+        });
+    }
+}
+
+function bindLandingEvents() {
+    const landingLoginBtn = document.getElementById('landing-login-btn');
+    const landingRegisterBtn = document.getElementById('landing-register-btn');
+    const heroLoginBtn = document.getElementById('hero-login-btn');
+
+    if (landingLoginBtn) {
+        landingLoginBtn.addEventListener('click', () => openModal('login'));
+    }
+    if (landingRegisterBtn) {
+        landingRegisterBtn.addEventListener('click', () => openModal('register'));
+    }
+    if (heroLoginBtn) {
+        heroLoginBtn.addEventListener('click', () => openModal('login'));
+    }
+}
+
+function bindWorkspaceEvents() {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const page = this.dataset.page;
+            if (page) {
+                navigateTo(page);
             }
         });
+    });
+
+    document.querySelectorAll('.module-card[data-target]').forEach(card => {
+        card.addEventListener('click', function() {
+            const target = this.dataset.target;
+            if (target) {
+                navigateTo(target);
+            }
+        });
+    });
+
+    const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
+    if (sidebarLogoutBtn) {
+        sidebarLogoutBtn.addEventListener('click', handleLogout);
+    }
+
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+    }
+
+    bindDebugPageEvents();
+}
+
+function bindDebugPageEvents() {
+    const debugSendBtn = document.getElementById('debug-sendBtn');
+    if (debugSendBtn) {
+        debugSendBtn.addEventListener('click', sendDebugRequest);
+    }
+
+    const debugPrompt = document.getElementById('debug-prompt');
+    if (debugPrompt) {
+        debugPrompt.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                sendDebugRequest();
+            }
+        });
+    }
+
+    initializeDebugFormWithConfig();
+}
+
+function navigateTo(page) {
+    if (!PAGE_TITLES[page]) {
+        page = 'dashboard';
+    }
+
+    currentPage = page;
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.page === page) {
+            item.classList.add('active');
+        }
+    });
+
+    document.querySelectorAll('.page-content').forEach(pageEl => {
+        pageEl.style.display = 'none';
+    });
+
+    const targetPage = document.getElementById(`${page}-page`);
+    if (targetPage) {
+        targetPage.style.display = 'block';
+    }
+
+    const pageTitle = document.getElementById('page-title');
+    if (pageTitle) {
+        pageTitle.textContent = PAGE_TITLES[page] || '工作台';
+    }
+
+    if (page === 'debug') {
+        initializeDebugFormWithConfig();
+    }
+}
+
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('collapsed');
     }
 }
 
@@ -135,16 +269,20 @@ function openModal(type) {
     const loginModal = document.getElementById('login-modal');
     const registerModal = document.getElementById('register-modal');
 
+    if (!overlay || !loginModal || !registerModal) return;
+
     overlay.style.display = 'block';
     
     if (type === 'login') {
         loginModal.style.display = 'block';
         registerModal.style.display = 'none';
-        document.getElementById('login-username').focus();
+        const loginUsername = document.getElementById('login-username');
+        if (loginUsername) loginUsername.focus();
     } else {
         loginModal.style.display = 'none';
         registerModal.style.display = 'block';
-        document.getElementById('register-username').focus();
+        const registerUsername = document.getElementById('register-username');
+        if (registerUsername) registerUsername.focus();
     }
 
     clearFormErrors();
@@ -159,29 +297,33 @@ function closeAllModals() {
     const loginModal = document.getElementById('login-modal');
     const registerModal = document.getElementById('register-modal');
 
-    overlay.style.display = 'none';
-    loginModal.style.display = 'none';
-    registerModal.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+    if (loginModal) loginModal.style.display = 'none';
+    if (registerModal) registerModal.style.display = 'none';
 
     clearFormErrors();
 }
 
 function clearFormErrors() {
-    document.getElementById('login-error').style.display = 'none';
-    document.getElementById('register-error').style.display = 'none';
+    const loginError = document.getElementById('login-error');
+    const registerError = document.getElementById('register-error');
+    if (loginError) loginError.style.display = 'none';
+    if (registerError) registerError.style.display = 'none';
 }
 
 function showFormError(type, message) {
     const errorDiv = document.getElementById(`${type}-error`);
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
 }
 
 async function handleLogin(e) {
     e.preventDefault();
 
-    const username = document.getElementById('login-username').value.trim();
-    const password = document.getElementById('login-password').value;
+    const username = document.getElementById('login-username')?.value.trim();
+    const password = document.getElementById('login-password')?.value;
 
     if (!username || !password) {
         showFormError('login', '请输入用户名和密码');
@@ -203,7 +345,7 @@ async function handleLogin(e) {
             setStoredToken(data.access_token);
             currentUser = data.user;
             closeAllModals();
-            showAuthenticated();
+            showWorkspace();
         } else {
             showFormError('login', data.detail || '登录失败，请检查用户名和密码');
         }
@@ -216,10 +358,10 @@ async function handleLogin(e) {
 async function handleRegister(e) {
     e.preventDefault();
 
-    const username = document.getElementById('register-username').value.trim();
-    const email = document.getElementById('register-email').value.trim();
-    const password = document.getElementById('register-password').value;
-    const confirmPassword = document.getElementById('register-confirm-password').value;
+    const username = document.getElementById('register-username')?.value.trim();
+    const email = document.getElementById('register-email')?.value.trim();
+    const password = document.getElementById('register-password')?.value;
+    const confirmPassword = document.getElementById('register-confirm-password')?.value;
 
     if (!username || !password) {
         showFormError('register', '请填写用户名和密码');
@@ -276,7 +418,7 @@ async function handleRegister(e) {
                 setStoredToken(loginData.access_token);
                 currentUser = loginData.user;
                 closeAllModals();
-                showAuthenticated();
+                showWorkspace();
             } else {
                 openModal('login');
                 showFormError('login', '注册成功，请登录');
@@ -306,7 +448,7 @@ async function handleLogout() {
 
     clearStoredToken();
     currentUser = null;
-    showNotAuthenticated();
+    showLandingPage();
 }
 
 async function loadConfig() {
@@ -316,18 +458,17 @@ async function loadConfig() {
             throw new Error(`配置文件加载失败: ${response.status}`);
         }
         modelConfig = await response.json();
-        initializeFormWithConfig();
     } catch (error) {
         console.error('加载配置文件失败:', error);
     }
 }
 
-function initializeFormWithConfig() {
+function initializeDebugFormWithConfig() {
     if (!modelConfig) return;
 
-    const modelSelect = document.getElementById('model');
-    const temperatureInput = document.getElementById('temperature');
-    const maxTokensInput = document.getElementById('max_tokens');
+    const modelSelect = document.getElementById('debug-model');
+    const temperatureInput = document.getElementById('debug-temperature');
+    const maxTokensInput = document.getElementById('debug-max_tokens');
 
     if (modelSelect) {
         modelSelect.innerHTML = '';
@@ -358,16 +499,16 @@ function initializeFormWithConfig() {
     }
 }
 
-function getFormData() {
+function getDebugFormData() {
     return {
-        prompt: document.getElementById('prompt').value.trim(),
-        model: document.getElementById('model').value,
-        temperature: parseFloat(document.getElementById('temperature').value),
-        max_tokens: parseInt(document.getElementById('max_tokens').value)
+        prompt: document.getElementById('debug-prompt')?.value.trim() || '',
+        model: document.getElementById('debug-model')?.value || '',
+        temperature: parseFloat(document.getElementById('debug-temperature')?.value || 0),
+        max_tokens: parseInt(document.getElementById('debug-max_tokens')?.value || 0)
     };
 }
 
-function validateForm(data) {
+function validateDebugForm(data) {
     if (!data.prompt) {
         alert('请输入 Prompt');
         return false;
@@ -387,103 +528,122 @@ function validateForm(data) {
     return true;
 }
 
-let isLoading = false;
+let isDebugLoading = false;
 
-function showLoading() {
-    const sendBtn = document.getElementById('sendBtn');
-    const responseDiv = document.getElementById('response');
-    const responseInfoDiv = document.getElementById('response-info');
+function showDebugLoading() {
+    const sendBtn = document.getElementById('debug-sendBtn');
+    const responseDiv = document.getElementById('debug-response');
+    const responseInfoDiv = document.getElementById('debug-response-info');
 
-    isLoading = true;
-    sendBtn.disabled = true;
-    sendBtn.textContent = '请求中...';
+    isDebugLoading = true;
+    if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent = '请求中...';
+    }
 
-    responseDiv.innerHTML = `
-        <div class="loading">
-            <div class="spinner"></div>
-            <span>正在处理请求，请稍候...</span>
-        </div>
-    `;
-    responseInfoDiv.style.display = 'none';
+    if (responseDiv) {
+        responseDiv.innerHTML = `
+            <div class="loading-debug">
+                <div class="spinner-debug"></div>
+                <span>正在处理请求，请稍候...</span>
+            </div>
+        `;
+    }
+    if (responseInfoDiv) {
+        responseInfoDiv.style.display = 'none';
+    }
 }
 
-function hideLoading() {
-    const sendBtn = document.getElementById('sendBtn');
+function hideDebugLoading() {
+    const sendBtn = document.getElementById('debug-sendBtn');
 
-    isLoading = false;
-    sendBtn.disabled = false;
-    sendBtn.textContent = '发送请求';
+    isDebugLoading = false;
+    if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '发送请求';
+    }
 }
 
-function showResponse(data) {
-    const responseDiv = document.getElementById('response');
-    const responseInfoDiv = document.getElementById('response-info');
-    const infoContentDiv = document.getElementById('info-content');
+function showDebugResponse(data) {
+    const responseDiv = document.getElementById('debug-response');
+    const responseInfoDiv = document.getElementById('debug-response-info');
+    const infoContentDiv = document.getElementById('debug-info-content');
+
+    if (!responseDiv) return;
 
     responseDiv.innerHTML = '';
 
     if (data.success && data.content) {
         const contentDiv = document.createElement('div');
-        contentDiv.className = 'success';
+        contentDiv.className = 'success-debug';
         contentDiv.textContent = data.content;
         responseDiv.appendChild(contentDiv);
 
-        responseInfoDiv.style.display = 'block';
-        let infoHtml = '';
+        if (responseInfoDiv) {
+            responseInfoDiv.style.display = 'block';
+            let infoHtml = '';
 
-        if (data.model) {
-            infoHtml += `<p><strong>模型:</strong> ${data.model}</p>`;
-        }
-        if (data.latency_ms) {
-            infoHtml += `<p><strong>耗时:</strong> ${data.latency_ms} ms</p>`;
-        }
-        if (data.request_id) {
-            infoHtml += `<p><strong>请求ID:</strong> ${data.request_id}</p>`;
-        }
-        if (data.usage) {
-            infoHtml += `<p><strong>Token 使用:</strong> 总计 ${data.usage.total_tokens} (输入: ${data.usage.prompt_tokens}, 输出: ${data.usage.completion_tokens})</p>`;
-        }
-        if (data.timestamp) {
-            infoHtml += `<p><strong>时间:</strong> ${new Date(data.timestamp).toLocaleString('zh-CN')}</p>`;
-        }
+            if (data.model) {
+                infoHtml += `<p><strong>模型:</strong> ${data.model}</p>`;
+            }
+            if (data.latency_ms) {
+                infoHtml += `<p><strong>耗时:</strong> ${data.latency_ms} ms</p>`;
+            }
+            if (data.request_id) {
+                infoHtml += `<p><strong>请求ID:</strong> ${data.request_id}</p>`;
+            }
+            if (data.usage) {
+                infoHtml += `<p><strong>Token 使用:</strong> 总计 ${data.usage.total_tokens} (输入: ${data.usage.prompt_tokens}, 输出: ${data.usage.completion_tokens})</p>`;
+            }
+            if (data.timestamp) {
+                infoHtml += `<p><strong>时间:</strong> ${new Date(data.timestamp).toLocaleString('zh-CN')}</p>`;
+            }
 
-        infoContentDiv.innerHTML = infoHtml;
+            if (infoContentDiv) {
+                infoContentDiv.innerHTML = infoHtml;
+            }
+        }
     } else {
         const errorDiv = document.createElement('div');
-        errorDiv.className = 'error';
+        errorDiv.className = 'error-debug';
         errorDiv.textContent = data.error_msg || '请求失败，请稍后重试';
         responseDiv.appendChild(errorDiv);
     }
 }
 
-function showError(message) {
-    const responseDiv = document.getElementById('response');
-    const responseInfoDiv = document.getElementById('response-info');
+function showDebugError(message) {
+    const responseDiv = document.getElementById('debug-response');
+    const responseInfoDiv = document.getElementById('debug-response-info');
 
-    responseDiv.innerHTML = `
-        <div class="error">
-            ${message}
-        </div>
-    `;
-    responseInfoDiv.style.display = 'none';
+    if (responseDiv) {
+        responseDiv.innerHTML = `
+            <div class="error-debug">
+                ${message}
+            </div>
+        `;
+    }
+    if (responseInfoDiv) {
+        responseInfoDiv.style.display = 'none';
+    }
 }
 
-async function sendRequest() {
-    if (isLoading) return;
+async function sendDebugRequest() {
+    if (isDebugLoading) return;
 
     const token = getStoredToken();
     if (!token) {
+        showLandingPage();
         openModal('login');
         return;
     }
 
-    const formData = getFormData();
+    const formData = getDebugFormData();
 
-    if (!validateForm(formData)) {
+    if (!validateDebugForm(formData)) {
         return;
     }
 
-    showLoading();
+    showDebugLoading();
 
     try {
         const response = await fetch('/api/chat', {
@@ -498,9 +658,9 @@ async function sendRequest() {
         if (response.status === 401) {
             clearStoredToken();
             currentUser = null;
-            showNotAuthenticated();
+            showLandingPage();
             openModal('login');
-            hideLoading();
+            hideDebugLoading();
             return;
         }
 
@@ -509,12 +669,12 @@ async function sendRequest() {
         }
 
         const data = await response.json();
-        showResponse(data);
+        showDebugResponse(data);
 
     } catch (error) {
         console.error('请求错误:', error);
-        showError(`请求失败: ${error.message}`);
+        showDebugError(`请求失败: ${error.message}`);
     } finally {
-        hideLoading();
+        hideDebugLoading();
     }
 }

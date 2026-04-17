@@ -22,3 +22,9 @@
 ## 说明
 
 本仓库当前用于 API 方案规划与能力整理，后续会持续补充具体示例与实现代码。
+
+## 启动命令
+
+```bash
+& "d:\python_envs\minimax_api_plan\python.exe" -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload  
+```
