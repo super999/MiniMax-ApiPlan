@@ -2,26 +2,30 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from jose import jwt
-from passlib.context import CryptContext
 
 from core.settings import settings
 from core.logger import get_logger
 
 logger = get_logger(__name__)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        return pwd_context.verify(plain_password, hashed_password)
+        import bcrypt
+        password_bytes = plain_password[:72].encode('utf-8')
+        hashed_bytes = hashed_password.encode('utf-8')
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
     except Exception as e:
         logger.error(f"密码验证失败: {e}")
         return False
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    import bcrypt
+    password_bytes = password[:72].encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def create_access_token(subject: int, expires_delta: Optional[int] = None) -> str:
