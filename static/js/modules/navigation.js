@@ -1,5 +1,3 @@
-import { AppState, PAGE_TITLES } from '../core/state.js';
-
 const NavigationModule = {
     navigateTo(page) {
         if (!PAGE_TITLES[page]) {
@@ -29,6 +27,10 @@ const NavigationModule = {
             pageTitle.textContent = PAGE_TITLES[page] || '工作台';
         }
 
+        if (page === 'debug') {
+            DebugModule.initializeForm();
+        }
+
         return page;
     },
     
@@ -39,5 +41,3 @@ const NavigationModule = {
         }
     }
 };
-
-export { NavigationModule };

@@ -1,5 +1,3 @@
-import { escapeHtml } from '../utils/helpers.js';
-
 const TOAST_CONFIG = {
     duration: 3000,
     autoClose: true,
@@ -93,12 +91,3 @@ function showWarning(title, message) {
 function showInfo(title, message) {
     return showToast('info', title, message);
 }
-
-export {
-    showToast,
-    removeToast,
-    showSuccess,
-    showError,
-    showWarning,
-    showInfo
-};

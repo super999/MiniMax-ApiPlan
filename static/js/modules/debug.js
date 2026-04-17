@@ -1,9 +1,3 @@
-import { AppState } from '../core/state.js';
-import { ConfigService } from '../core/config.js';
-import { StorageService } from '../services/storage.js';
-import { ApiService } from '../services/api.js';
-import { showError } from '../components/toast.js';
-
 let isDebugLoading = false;
 
 const DebugModule = {
@@ -231,5 +225,3 @@ const DebugModule = {
         this.initializeForm();
     }
 };
-
-export { DebugModule };

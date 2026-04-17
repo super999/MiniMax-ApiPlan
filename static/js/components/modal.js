@@ -103,15 +103,3 @@ function showCreateProjectError(message) {
         errorDiv.style.display = 'block';
     }
 }
-
-export {
-    openModal,
-    switchModal,
-    closeAllModals,
-    clearFormErrors,
-    showFormError,
-    openCreateProjectModal,
-    closeCreateProjectModal,
-    clearCreateProjectForm,
-    showCreateProjectError
-};

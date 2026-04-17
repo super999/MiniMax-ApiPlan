@@ -1,5 +1,3 @@
-import { AppState } from './state.js';
-
 const ConfigService = {
     async load() {
         try {
@@ -19,5 +17,3 @@ const ConfigService = {
         return AppState.get('modelConfig');
     }
 };
-
-export { ConfigService };

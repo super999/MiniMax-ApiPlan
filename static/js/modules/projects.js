@@ -1,15 +1,3 @@
-import { AppState } from '../core/state.js';
-import { ConfigService } from '../core/config.js';
-import { StorageService } from '../services/storage.js';
-import { ApiService } from '../services/api.js';
-import { showSuccess, showError } from '../components/toast.js';
-import { showConfirmDialog } from '../components/confirm.js';
-import { 
-    openCreateProjectModal, 
-    closeCreateProjectModal, 
-    showCreateProjectError 
-} from '../components/modal.js';
-
 const ProjectsModule = {
     async loadProjects() {
         const token = StorageService.getToken();
@@ -262,5 +250,3 @@ const ProjectsModule = {
         }
     }
 };
-
-export { ProjectsModule };
