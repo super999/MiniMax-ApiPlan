@@ -15,6 +15,10 @@ class AppSettings(BaseSettings):
     version: str = "1.0.0"
     debug: bool = False
     allowed_origins: list[str] = ["*"]
+    log_dir: str = "logs"
+    log_level: str = "INFO"
+    log_to_file: bool = True
+    log_to_console: bool = True
 
     class Config:
         env_prefix = "APP_"
@@ -28,7 +32,7 @@ class MiniMaxSettings(BaseSettings):
     group_id: Optional[str] = None
     base_url: str = "https://api.minimax.chat/v1/text/chatcompletion_v2"
     default_model: str = "abab6.5s-chat"
-    timeout: float = 60.0
+    timeout: float = 120.0
 
     @field_validator("api_key", mode="before")
     @classmethod
