@@ -30,8 +30,8 @@ class AppSettings(BaseSettings):
 class MiniMaxSettings(BaseSettings):
     api_key: Optional[str] = None
     group_id: Optional[str] = None
-    base_url: str = "https://api.minimax.chat/v1/text/chatcompletion_v2"
-    default_model: str = "abab6.5s-chat"
+    base_url: str = "https://api.minimaxi.com/v1/text/chatcompletion_v2"
+    default_model: str = "MiniMax-M2.7"
     timeout: float = 120.0
 
     @field_validator("api_key", mode="before")
@@ -78,7 +78,7 @@ class DatabaseSettings(BaseSettings):
 
 class EvaluationSettings(BaseSettings):
     enabled: bool = False
-    model: str = "abab6.5s-chat"
+    model: str = "MiniMax-M2.7"
 
     class Config:
         env_prefix = "EVALUATION_"
