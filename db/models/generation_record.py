@@ -74,6 +74,7 @@ class GenerationRecordBase(BaseModel):
 
 
 class GenerationRecordCreate(GenerationRecordBase):
+    project_id: int
     script_chapter_id: Optional[int] = None
     prompt: Optional[str] = None
     model_used: Optional[str] = None
