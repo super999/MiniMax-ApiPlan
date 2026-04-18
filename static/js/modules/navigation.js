@@ -31,6 +31,10 @@ const NavigationModule = {
             DebugModule.initializeForm();
         }
 
+        if (page === 'script') {
+            ScriptWorkshopModule.initialize();
+        }
+
         return page;
     },
     
