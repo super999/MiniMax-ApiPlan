@@ -106,6 +106,7 @@ class ScriptGenerationService:
             record_create = GenerationRecordCreate(
                 generation_type=generation_type,
                 script_work_id=script_work_id,
+                project_id=project_id,
                 script_chapter_id=script_chapter_id,
                 prompt=prompt,
                 metadata={
