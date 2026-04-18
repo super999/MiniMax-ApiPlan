@@ -9,6 +9,14 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 
+def _mask_api_key(key: Optional[str]) -> str:
+    if not key:
+        return "None"
+    if len(key) <= 8:
+        return "****"
+    return f"{key[:4]}...{key[-4:]}"
+
+
 @dataclass
 class MiniMaxUsageData:
     total_tokens: int = 0
@@ -43,6 +51,18 @@ class MiniMaxClient:
         self._owns_client = http_client is None
 
         self._validate_config()
+        self._log_config()
+
+    def _log_config(self) -> None:
+        masked_api_key = _mask_api_key(self._settings.api_key)
+        logger.info(
+            f"MiniMaxClient 配置: "
+            f"base_url={self._settings.base_url}, "
+            f"default_model={self._settings.default_model}, "
+            f"timeout={self._settings.timeout}s, "
+            f"api_key={masked_api_key}, "
+            f"group_id={self._settings.group_id or '未配置'}"
+        )
 
     def _validate_config(self) -> None:
         if not self._settings.api_key:
@@ -154,7 +174,19 @@ class MiniMaxClient:
             headers = self._build_headers()
             params = self._build_query_params()
 
-            logger.debug(f"发送请求到 MiniMax API: model={body.get('model')}")
+            full_url = self.base_url
+            if params:
+                query_str = "&".join([f"{k}={v}" for k, v in params.items()])
+                full_url = f"{self.base_url}?{query_str}"
+
+            logger.info(f"===== MiniMax API 请求开始 =====")
+            logger.info(f"请求 URL: {full_url}")
+            logger.info(f"请求方法: POST")
+            logger.info(f"模型: {body.get('model')}")
+            logger.info(f"Temperature: {body.get('temperature')}")
+            logger.info(f"Max Tokens: {body.get('max_tokens')}")
+            logger.info(f"Prompt 长度: {len(prompt)} 字符")
+            logger.debug(f"完整请求体: {body}")
 
             response = await client.post(
                 self.base_url,
@@ -165,13 +197,21 @@ class MiniMaxClient:
 
             latency_ms = (time.time() - start_time) * 1000
 
+            logger.info(f"HTTP 状态码: {response.status_code}")
+            logger.info(f"请求耗时: {latency_ms:.2f}ms")
+
             if response.status_code != 200:
                 error_msg = f"API请求失败，状态码: {response.status_code}"
-                logger.error(f"{error_msg}, 响应: {response.text[:500]}")
+                response_text = response.text
+                logger.error(f"{error_msg}")
+                logger.error(f"原始响应: {response_text[:1000] if response_text else '空响应'}")
+
                 try:
                     error_data = response.json()
+                    logger.error(f"解析后的错误数据: {error_data}")
                 except Exception:
-                    error_data = {"detail": response.text}
+                    error_data = {"detail": response_text}
+
                 return (
                     None,
                     MiniMaxError(
@@ -182,24 +222,56 @@ class MiniMaxClient:
                     latency_ms,
                 )
 
-            response_data = response.json()
+            response_text = response.text
+            logger.debug(f"原始响应内容: {response_text[:2000] if response_text else '空响应'}")
+
+            try:
+                response_data = response.json()
+            except Exception as e:
+                error_msg = f"解析响应JSON失败: {str(e)}"
+                logger.error(f"{error_msg}")
+                logger.error(f"响应文本: {response_text[:500] if response_text else '空'}")
+                return (
+                    None,
+                    MiniMaxError(code=500, message=error_msg),
+                    latency_ms,
+                )
+
             result = self._parse_response(response_data)
 
-            logger.debug(f"MiniMax API 响应成功，耗时: {latency_ms:.2f}ms")
+            logger.info(f"响应 ID: {result.id or '无'}")
+            logger.info(f"响应模型: {result.model or '无'}")
+            logger.info(f"响应内容长度: {len(result.content)} 字符")
+            if result.usage:
+                logger.info(
+                    f"Token 使用量: total={result.usage.total_tokens}, "
+                    f"prompt={result.usage.prompt_tokens}, "
+                    f"completion={result.usage.completion_tokens}"
+                )
+            logger.info(f"===== MiniMax API 请求成功 =====")
+
             return result, None, latency_ms
 
         except httpx.TimeoutException:
             latency_ms = (time.time() - start_time) * 1000
-            logger.error(f"MiniMax API 请求超时，耗时: {latency_ms:.2f}ms")
+            logger.error(f"===== MiniMax API 请求超时 =====")
+            logger.error(f"超时时间配置: {self.timeout}s")
+            logger.error(f"实际耗时: {latency_ms:.2f}ms")
+            logger.error(f"请求 URL: {self.base_url}")
+            logger.error(f"==================================")
             return (
                 None,
-                MiniMaxError(code=408, message="请求超时，请稍后重试"),
+                MiniMaxError(code=408, message=f"请求超时（配置: {self.timeout}s，实际: {latency_ms:.1f}ms），请稍后重试"),
                 latency_ms,
             )
 
         except Exception as e:
             latency_ms = (time.time() - start_time) * 1000
-            logger.error(f"MiniMax API 调用出错: {str(e)}", exc_info=True)
+            logger.error(f"===== MiniMax API 调用异常 =====")
+            logger.error(f"异常类型: {type(e).__name__}")
+            logger.error(f"异常信息: {str(e)}")
+            logger.error(f"请求 URL: {self.base_url}")
+            logger.error(f"==================================", exc_info=True)
             return (
                 None,
                 MiniMaxError(code=500, message=f"发生错误: {str(e)}"),
@@ -208,6 +280,7 @@ class MiniMaxClient:
 
     async def close(self) -> None:
         if self._owns_client and self._http_client is not None:
+            logger.info("关闭 MiniMaxClient HTTP 连接")
             await self._http_client.aclose()
             self._http_client = None
 
