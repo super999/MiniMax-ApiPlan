@@ -33,9 +33,13 @@ else:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app_logger.debug("正在初始化应用程序...")
     app_logger.info(f"===== {settings.app.name} 服务启动中 =====")
     app_logger.info(f"版本: {settings.app.version}")
     app_logger.info(f"工作目录: {os.getcwd()}")
+    app_logger.debug(f"日志级别设置为: {settings.log.level}")
+    app_logger.debug(f"文件日志输出已启用: {settings.log.file_enabled}")
+    app_logger.debug(f"日志文件路径: {settings.log.file_path}")
 
     if is_database_configured():
         app_logger.info("数据库已配置，准备初始化...")
@@ -47,10 +51,12 @@ async def lifespan(app: FastAPI):
     else:
         app_logger.info("数据库未配置，跳过数据库初始化")
 
+    app_logger.debug("应用程序初始化完成，准备接收请求")
     app_logger.info("===== 服务启动完成 =====")
 
     yield
 
+    app_logger.debug("正在关闭应用程序...")
     app_logger.info("===== 服务关闭中 =====")
 
     if is_database_configured():
@@ -61,6 +67,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             app_logger.error(f"关闭数据库连接池失败: {e}")
 
+    app_logger.debug("应用程序已完全关闭")
     app_logger.info("===== 服务已关闭 =====")
 
 
