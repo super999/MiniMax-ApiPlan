@@ -31,6 +31,12 @@ const NavigationModule = {
             DebugModule.initializeForm();
         }
 
+        if (page === 'script' && window.ScriptWorksModule) {
+            window.ScriptWorksModule.init();
+            // 加载项目列表
+            window.ScriptWorksModule.loadProjects();
+        }
+
         return page;
     },
     

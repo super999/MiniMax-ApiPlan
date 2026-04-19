@@ -292,13 +292,211 @@
                 </div>
 
                 <div id="script-page" class="page-content" style="display: none;">
-                    <div class="placeholder-page">
-                        <div class="placeholder-icon">📜</div>
-                        <h3>脚本工坊</h3>
-                        <p>该功能正在开发中，敬请期待...</p>
-                        <div class="placeholder-actions">
-                            <button class="btn-secondary" onclick="navigateTo('dashboard')">返回工作台</button>
+                    <div class="script-workshop-container">
+                        <!-- 项目和脚本作品选择区域 -->
+                        <div class="script-header-section">
+                            <div class="project-selector">
+                                <label for="script-project-select">当前项目:</label>
+                                <select id="script-project-select" class="form-select">
+                                    <option value="">请选择项目</option>
+                                </select>
+                            </div>
+                            <div class="script-work-selector">
+                                <label for="script-work-select">脚本作品:</label>
+                                <select id="script-work-select" class="form-select">
+                                    <option value="">请选择脚本作品</option>
+                                </select>
+                                <button id="create-script-work-btn" class="btn-secondary btn-sm">新建脚本作品</button>
+                            </div>
                         </div>
+
+                        <!-- 分步编辑区域 -->
+                        <div id="script-editor-container" class="script-editor-container" style="display: none;">
+                            <!-- 标签页导航 -->
+                            <div class="script-tabs">
+                                <button class="script-tab-btn active" data-tab="outline">大纲</button>
+                                <button class="script-tab-btn" data-tab="characters">人物设定</button>
+                                <button class="script-tab-btn" data-tab="chapters">分集/分场</button>
+                            </div>
+
+                            <!-- 大纲编辑区 -->
+                            <div id="outline-tab" class="script-tab-content active">
+                                <div class="section-header">
+                                    <h3>故事大纲</h3>
+                                    <div class="section-actions">
+                                        <button id="generate-outline-btn" class="btn-secondary btn-sm ai-btn" disabled>
+                                            <span class="ai-icon">🤖</span> 自动生成大纲
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="editor-section">
+                                    <textarea 
+                                        id="outline-editor" 
+                                        class="script-editor" 
+                                        placeholder="请输入故事大纲，包括故事背景、主要情节线、核心冲突等..."
+                                        rows="15"
+                                    ></textarea>
+                                    <div class="editor-actions">
+                                        <button id="save-outline-btn" class="btn-primary">保存大纲</button>
+                                        <span id="outline-status" class="save-status"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 人物设定编辑区 -->
+                            <div id="characters-tab" class="script-tab-content" style="display: none;">
+                                <div class="section-header">
+                                    <h3>人物设定</h3>
+                                    <div class="section-actions">
+                                        <button id="generate-characters-btn" class="btn-secondary btn-sm ai-btn" disabled>
+                                            <span class="ai-icon">🤖</span> 自动生成人物设定
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="editor-section">
+                                    <textarea 
+                                        id="characters-editor" 
+                                        class="script-editor" 
+                                        placeholder="请输入人物设定，包括主要角色的姓名、年龄、性格、外貌、背景故事等..."
+                                        rows="15"
+                                    ></textarea>
+                                    <div class="editor-actions">
+                                        <button id="save-characters-btn" class="btn-primary">保存人物设定</button>
+                                        <span id="characters-status" class="save-status"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 分集/分场编辑区 -->
+                            <div id="chapters-tab" class="script-tab-content" style="display: none;">
+                                <div class="section-header">
+                                    <h3>分集/分场内容</h3>
+                                    <div class="section-actions">
+                                        <button id="create-chapter-btn" class="btn-primary btn-sm">新建章节</button>
+                                        <button id="generate-chapters-btn" class="btn-secondary btn-sm ai-btn" disabled>
+                                            <span class="ai-icon">🤖</span> 自动生成分集
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- 章节列表 -->
+                                <div class="chapters-list-container">
+                                    <div id="chapters-list" class="chapters-list">
+                                        <div class="empty-state" style="display: none;">
+                                            <p>暂无章节，点击"新建章节"开始创建</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 章节详情编辑区 -->
+                                    <div id="chapter-editor-container" class="chapter-editor-container" style="display: none;">
+                                        <div class="chapter-header">
+                                            <div class="chapter-info">
+                                                <span class="chapter-number-label">第 <span id="current-chapter-number">1</span> 集</span>
+                                                <input 
+                                                    type="text" 
+                                                    id="current-chapter-title" 
+                                                    class="chapter-title-input" 
+                                                    placeholder="章节标题"
+                                                >
+                                            </div>
+                                            <div class="chapter-actions">
+                                                <button id="generate-chapter-outline-btn" class="btn-secondary btn-sm ai-btn" disabled>
+                                                    <span class="ai-icon">🤖</span> 生成本集大纲
+                                                </button>
+                                                <button id="generate-chapter-content-btn" class="btn-secondary btn-sm ai-btn" disabled>
+                                                    <span class="ai-icon">🤖</span> 生成本集内容
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="chapter-editor-section">
+                                            <label class="editor-label">本集大纲:</label>
+                                            <textarea 
+                                                id="chapter-outline-editor" 
+                                                class="chapter-editor" 
+                                                placeholder="请输入本集大纲..."
+                                                rows="6"
+                                            ></textarea>
+                                        </div>
+                                        
+                                        <div class="chapter-editor-section">
+                                            <label class="editor-label">本集内容:</label>
+                                            <textarea 
+                                                id="chapter-content-editor" 
+                                                class="chapter-editor" 
+                                                placeholder="请输入本集详细内容..."
+                                                rows="15"
+                                            ></textarea>
+                                        </div>
+                                        
+                                        <div class="editor-actions">
+                                            <button id="save-chapter-btn" class="btn-primary">保存章节</button>
+                                            <button id="delete-chapter-btn" class="btn-secondary delete-btn">删除章节</button>
+                                            <span id="chapter-status" class="save-status"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 无脚本作品时的引导区域 -->
+                        <div id="no-script-work-container" class="no-script-work-container">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📜</div>
+                                <h4>开始创建你的第一个脚本作品</h4>
+                                <p>选择一个项目，然后创建脚本作品开始创作</p>
+                                <button id="welcome-create-script-btn" class="btn-primary">新建脚本作品</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新建脚本作品弹窗 -->
+                <div id="create-script-work-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>新建脚本作品</h3>
+                            <button class="modal-close" id="close-create-script-work">&times;</button>
+                        </div>
+                        <form id="create-script-work-form" class="auth-form">
+                            <div class="form-group">
+                                <label for="new-script-work-title">作品名称:</label>
+                                <input type="text" id="new-script-work-title" name="title" required placeholder="请输入作品名称" maxlength="200">
+                            </div>
+                            <div class="form-group">
+                                <label for="new-script-work-description">作品描述 (可选):</label>
+                                <textarea id="new-script-work-description" name="description" rows="3" placeholder="请输入作品描述" maxlength="1000"></textarea>
+                            </div>
+                            <div id="create-script-work-error" class="form-error" style="display: none;"></div>
+                            <button type="submit" class="btn-primary" id="create-script-work-submit">创建作品</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 新建章节弹窗 -->
+                <div id="create-chapter-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>新建章节</h3>
+                            <button class="modal-close" id="close-create-chapter">&times;</button>
+                        </div>
+                        <form id="create-chapter-form" class="auth-form">
+                            <div class="form-group">
+                                <label for="new-chapter-number">章节号:</label>
+                                <input type="number" id="new-chapter-number" name="chapter_number" min="1" placeholder="自动生成">
+                                <small class="form-hint">留空则自动按顺序生成</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-chapter-title">章节标题:</label>
+                                <input type="text" id="new-chapter-title" name="title" required placeholder="请输入章节标题" maxlength="200">
+                            </div>
+                            <div class="form-group">
+                                <label for="new-chapter-outline">章节大纲 (可选):</label>
+                                <textarea id="new-chapter-outline" name="outline" rows="4" placeholder="请输入章节大纲"></textarea>
+                            </div>
+                            <div id="create-chapter-error" class="form-error" style="display: none;"></div>
+                            <button type="submit" class="btn-primary" id="create-chapter-submit">创建章节</button>
+                        </form>
                     </div>
                 </div>
 
@@ -523,6 +721,7 @@
     <script src="/static/js/modules/auth.js"></script>
     <script src="/static/js/modules/navigation.js"></script>
     <script src="/static/js/modules/projects.js"></script>
+    <script src="/static/js/modules/script_works.js"></script>
     <script src="/static/js/core/app.js"></script>
 </body>
 </html>
