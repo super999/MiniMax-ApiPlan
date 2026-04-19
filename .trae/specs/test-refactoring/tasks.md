@@ -32,7 +32,7 @@
   - `programmatic` TR-2.5: 存在 `tests/__init__.py` 文件
 - **Notes**: 目录结构应清晰，便于后续扩展
 
-## [/] Task 3: 重构配置测试文件（test_config.py）
+## [x] Task 3: 重构配置测试文件（test_config.py）
 - **Priority**: P0
 - **Depends On**: Task 2
 - **Description**: 
@@ -50,7 +50,7 @@
   - `programmatic` TR-3.4: 测试文件使用 pytest 的 assert 而非自定义打印输出
 - **Notes**: 保持原有的测试逻辑不变，仅改造测试框架
 
-## [/] Task 4: 创建共享 fixtures 和辅助函数
+## [x] Task 4: 创建共享 fixtures 和辅助函数
 - **Priority**: P0
 - **Depends On**: Task 2
 - **Description**: 
@@ -66,7 +66,7 @@
   - `programmatic` TR-4.2: fixtures 可以被测试文件正确导入和使用
 - **Notes**: fixtures 应使用 pytest 的 `@pytest.fixture` 装饰器
 
-## [ ] Task 5: 重构用户认证测试（test_runner.py 中的用户注册和登录部分）
+## [x] Task 5: 重构用户认证测试（test_runner.py 中的用户注册和登录部分）
 - **Priority**: P1
 - **Depends On**: Task 4
 - **Description**: 
@@ -85,7 +85,7 @@
   - `programmatic` TR-5.4: 运行 `pytest tests/integration/test_auth.py -v --collect-only` 可以发现所有测试用例
 - **Notes**: 集成测试需要运行的服务器，测试时需要确保服务已启动
 
-## [ ] Task 6: 重构项目管理测试（test_runner.py 中的项目创建和删除部分）
+## [x] Task 6: 重构项目管理测试（test_runner.py 中的项目创建和删除部分）
 - **Priority**: P1
 - **Depends On**: Task 5
 - **Description**: 
@@ -104,7 +104,7 @@
   - `programmatic` TR-6.4: 运行 `pytest tests/integration/test_projects.py -v --collect-only` 可以发现所有测试用例
 - **Notes**: 考虑使用 `pytest-dependency` 或 fixtures 处理测试依赖
 
-## [ ] Task 7: 重构脚本作品测试（test_runner.py 中的脚本大纲部分）
+## [x] Task 7: 重构脚本作品测试（test_runner.py 中的脚本大纲部分）
 - **Priority**: P1
 - **Depends On**: Task 6
 - **Description**: 
@@ -121,7 +121,7 @@
   - `programmatic` TR-7.4: 运行 `pytest tests/integration/test_script_works.py -v --collect-only` 可以发现所有测试用例
 - **Notes**: 保持原有的测试逻辑不变
 
-## [ ] Task 8: 配置 VSCode 支持 pytest
+## [x] Task 8: 配置 VSCode 支持 pytest
 - **Priority**: P2
 - **Depends On**: Task 3, Task 5, Task 6, Task 7
 - **Description**: 
@@ -138,7 +138,7 @@
   - `human-judgement` TR-8.3: 可以在 VSCode 中点击运行单个测试用例
 - **Notes**: 需要开发者在 VSCode 中验证
 
-## [ ] Task 9: 验证并清理旧测试文件
+## [x] Task 9: 验证并清理旧测试文件
 - **Priority**: P2
 - **Depends On**: Task 8
 - **Description**: 

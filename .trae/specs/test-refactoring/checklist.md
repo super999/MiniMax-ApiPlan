@@ -57,7 +57,7 @@
 - [x] 测试文件数量和测试用例数量不少于原有测试
 
 ## VSCode 集成检查（人工验证）
-- [ ] VSCode 设置中 pytest 已启用（`.vscode/settings.json` 配置正确）
+- [x] VSCode 设置中 pytest 已启用（`.vscode/settings.json` 配置正确）
 - [ ] VSCode 测试面板可以显示所有测试用例
 - [ ] 可以在 VSCode 中点击运行单个测试用例
 - [ ] 可以在 VSCode 中调试测试用例
@@ -70,6 +70,6 @@
 - [ ] 项目根目录没有遗留的测试相关临时文件
 
 ## 分组功能验证
-- [ ] 可以通过 markers 分组运行测试（如 `pytest -m auth`）
-- [ ] 可以通过目录分组运行测试（如 `pytest tests/unit/` 或 `pytest tests/integration/`）
-- [ ] 可以通过文件名分组运行测试（如 `pytest tests/integration/test_auth.py`）
+- [x] 可以通过 markers 分组运行测试（如 `pytest -m auth`）
+- [x] 可以通过目录分组运行测试（如 `pytest tests/unit/` 或 `pytest tests/integration/`）
+- [x] 可以通过文件名分组运行测试（如 `pytest tests/integration/test_auth.py`）
