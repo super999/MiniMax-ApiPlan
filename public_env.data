@@ -2,10 +2,19 @@ APP_NAME=MiniMax API Plan
 APP_VERSION=1.0.0
 APP_DEBUG=true
 APP_ALLOWED_ORIGINS=["*"]
-APP_LOG_DIR=logs
-APP_LOG_LEVEL=DEBUG
-APP_LOG_TO_FILE=true
-APP_LOG_TO_CONSOLE=true
+
+# 日志配置 (使用 LOG_ 前缀)
+# 说明：以下配置由 LogSettings 类读取，env_prefix = "LOG_"
+LOG_LEVEL=INFO
+LOG_FILE_ENABLED=true
+LOG_FILE_PATH=logs/app.log
+LOG_ROTATION_DAYS=7
+
+# 注意：以下 APP_LOG_ 前缀的配置已废弃，不再使用
+# APP_LOG_DIR=logs
+# APP_LOG_LEVEL=DEBUG
+# APP_LOG_TO_FILE=true
+# APP_LOG_TO_CONSOLE=true
 
 MINIMAX_API_KEY="your_api_key_here"
 MINIMAX_GROUP_ID=
