@@ -526,13 +526,8 @@ async def update_chapter(
                 detail=f"章节号 {chapter_in.chapter_number} 已存在",
             )
 
-    update_data = ScriptChapterUpdate(
-        title=chapter_in.title,
-        chapter_number=chapter_in.chapter_number,
-        outline=chapter_in.outline,
-        content=chapter_in.content,
-        status=chapter_in.status,
-    )
+    update_dict = chapter_in.model_dump(exclude_unset=True)
+    update_data = ScriptChapterUpdate(**update_dict)
 
     updated_chapter = await script_chapter_crud.update(
         db,

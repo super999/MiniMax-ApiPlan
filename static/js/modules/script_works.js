@@ -29,6 +29,12 @@ const ScriptWorksModule = {
             createScriptWorkBtn.addEventListener('click', () => this.openCreateScriptWorkModal());
         }
 
+        // 删除脚本作品按钮
+        const deleteScriptWorkBtn = document.getElementById('delete-script-work-btn');
+        if (deleteScriptWorkBtn) {
+            deleteScriptWorkBtn.addEventListener('click', () => this.deleteScriptWork());
+        }
+
         const welcomeCreateScriptBtn = document.getElementById('welcome-create-script-btn');
         if (welcomeCreateScriptBtn) {
             welcomeCreateScriptBtn.addEventListener('click', () => this.openCreateScriptWorkModal());
@@ -194,6 +200,12 @@ const ScriptWorksModule = {
         this.currentScriptWorkId = scriptWorkId;
         this.currentChapterId = null;
         this.chapters = [];
+
+        // 显示/隐藏删除按钮
+        const deleteBtn = document.getElementById('delete-script-work-btn');
+        if (deleteBtn) {
+            deleteBtn.style.display = scriptWorkId ? 'inline-block' : 'none';
+        }
 
         if (scriptWorkId) {
             await this.loadScriptWorkDetail(scriptWorkId);
@@ -549,6 +561,66 @@ const ScriptWorksModule = {
             }
         } catch (error) {
             console.error('删除章节失败:', error);
+            showError('删除失败', '网络错误，请稍后重试');
+        }
+    },
+
+    // 删除脚本作品
+    async deleteScriptWork() {
+        if (!this.currentScriptWorkId) {
+            showError('删除失败', '请先选择一个脚本作品');
+            return;
+        }
+
+        const confirmed = await showConfirmDialog({
+            title: '确认删除',
+            message: '确定要删除这个脚本作品吗？此操作将删除该作品下的所有章节，且无法撤销。',
+            type: 'danger',
+            confirmText: '删除',
+            cancelText: '取消'
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response = await ApiService.request(`/api/script-works/${this.currentScriptWorkId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // 从本地数据中移除
+                this.scriptWorks = this.scriptWorks.filter(w => w.id !== this.currentScriptWorkId);
+                this.currentScriptWorkId = null;
+                this.currentChapterId = null;
+                this.chapters = [];
+
+                // 重新渲染脚本作品列表
+                this.renderScriptWorkOptions();
+
+                // 重置选择器
+                const scriptWorkSelect = document.getElementById('script-work-select');
+                if (scriptWorkSelect) {
+                    scriptWorkSelect.value = '';
+                }
+
+                // 隐藏删除按钮
+                const deleteBtn = document.getElementById('delete-script-work-btn');
+                if (deleteBtn) {
+                    deleteBtn.style.display = 'none';
+                }
+
+                // 隐藏编辑器
+                this.hideEditor();
+
+                showSuccess('删除成功', '脚本作品已删除');
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                showError('删除失败', errorData.detail || '删除脚本作品失败');
+            }
+        } catch (error) {
+            console.error('删除脚本作品失败:', error);
             showError('删除失败', '网络错误，请稍后重试');
         }
     },
