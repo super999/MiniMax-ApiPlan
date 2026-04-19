@@ -120,7 +120,17 @@ const ProjectsModule = {
     },
     
     handleProjectClick(project) {
-        console.log('点击项目:', project);
+        // 跳转到脚本工坊页面，并加载该项目
+        if (window.ScriptWorksModule) {
+            // 先导航到脚本工坊页面
+            NavigationModule.navigateTo('script');
+            // 然后加载项目
+            setTimeout(() => {
+                window.ScriptWorksModule.navigateToProject(project.id);
+            }, 100);
+        } else {
+            console.log('点击项目:', project);
+        }
     },
     
     handleEditProject(project) {
