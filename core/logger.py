@@ -19,18 +19,18 @@ def _get_log_level(level_str: str) -> int:
 
 
 def setup_logger(
-    name: str = "minimax_api_plan",
+    name: Optional[str] = None,
     level: Optional[int] = None,
     format_str: Optional[str] = None,
 ) -> logging.Logger:
     if level is None:
         level = _get_log_level(settings.log.level)
 
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
 
-    if logger.handlers:
-        logger.handlers.clear()
+    if root_logger.handlers:
+        root_logger.handlers.clear()
 
     formatter = logging.Formatter(
         format_str
@@ -41,7 +41,7 @@ def setup_logger(
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(level)
     console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    root_logger.addHandler(console_handler)
 
     if settings.log.file_enabled:
         log_path = Path(settings.log.file_path)
@@ -54,11 +54,11 @@ def setup_logger(
         )
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        root_logger.addHandler(file_handler)
 
-    logger.propagate = False
-
-    return logger
+    if name:
+        return logging.getLogger(name)
+    return root_logger
 
 
 def get_logger(name: str) -> logging.Logger:
