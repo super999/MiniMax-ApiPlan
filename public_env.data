@@ -27,3 +27,12 @@ DB_POOL_SIZE=10
 DB_MAX_OVERFLOW=5
 DB_POOL_RECYCLE=3600
 DB_ECHO=false
+
+# JWT 配置
+# JWT_SECRET_KEY: 用于 JWT 签名的密钥，生产环境必须设置自定义密钥
+# 建议使用足够长且随机的字符串，可以使用以下命令生成: python -c "import secrets; print(secrets.token_urlsafe(32))"
+JWT_SECRET_KEY=minimax_api_plan_default_jwt_secret_key_2024_secure_abc123xyz
+# JWT_ALGORITHM: JWT 签名算法，默认使用 HS256
+JWT_ALGORITHM=HS256
+# JWT_ACCESS_TOKEN_EXPIRE_MINUTES: Access Token 过期时间（分钟），默认 1440 分钟（24 小时）
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=1440

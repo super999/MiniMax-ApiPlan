@@ -16,6 +16,10 @@
     width: var(--sidebar-collapsed-width);
 }
 
+.sidebar.collapsed .sidebar-header {
+    padding: 16px 8px;
+}
+
 .sidebar-header {
     display: flex;
     align-items: center;

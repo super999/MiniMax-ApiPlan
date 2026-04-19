@@ -152,9 +152,7 @@
     color: var(--text-primary);
 }
 
-.sidebar.collapsed .sidebar-toggle {
-    display: none;
-}
+
 
 .btn-logout-sidebar {
     display: flex;

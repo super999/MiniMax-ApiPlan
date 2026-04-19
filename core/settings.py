@@ -89,7 +89,7 @@ class EvaluationSettings(BaseSettings):
 
 
 class JWTSettings(BaseSettings):
-    secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
+    secret_key: str = "minimax_api_plan_default_jwt_secret_key_2024_secure_abc123xyz"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24
 
