@@ -104,12 +104,26 @@ class JWTSettings(BaseSettings):
         extra = "ignore"
 
 
+class LogSettings(BaseSettings):
+    level: str = "DEBUG"
+    file_enabled: bool = True
+    file_path: str = "logs/app.log"
+    rotation_days: int = 7
+
+    class Config:
+        env_prefix = "LOG_"
+        env_file = ENV_FILES
+        env_file_encoding = ENV_FILE_ENCODING
+        extra = "ignore"
+
+
 class Settings(BaseSettings):
     app: AppSettings = Field(default_factory=AppSettings)
     minimax: MiniMaxSettings = Field(default_factory=MiniMaxSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings)
     jwt: JWTSettings = Field(default_factory=JWTSettings)
+    log: LogSettings = Field(default_factory=LogSettings)
 
     class Config:
         env_file = ENV_FILES
