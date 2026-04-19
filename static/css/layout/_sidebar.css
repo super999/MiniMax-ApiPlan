@@ -18,6 +18,31 @@
 
 .sidebar.collapsed .sidebar-header {
     padding: 16px 8px;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.sidebar.collapsed .sidebar-logo {
+    gap: 0;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    z-index: 10;
+    transition: opacity 0.15s ease;
+}
+
+.sidebar.collapsed .sidebar-header:hover .sidebar-toggle {
+    opacity: 1;
+}
+
+.sidebar.collapsed .sidebar-header:hover .sidebar-logo {
+    opacity: 0;
 }
 
 .sidebar-header {
