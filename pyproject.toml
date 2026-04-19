@@ -4,3 +4,10 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v"
+markers = [
+    "unit: 单元测试",
+    "integration: 集成测试",
+    "auth: 用户认证测试",
+    "projects: 项目管理测试",
+    "script_works: 脚本作品测试",
+]
