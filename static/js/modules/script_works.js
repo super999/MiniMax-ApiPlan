@@ -438,7 +438,7 @@ const ScriptWorksModule = {
         // 显示目标内容
         const targetTab = document.getElementById(`${tabName}-tab`);
         if (targetTab) {
-            targetTab.style.display = 'block';
+            targetTab.style.display = 'flex';
             targetTab.classList.add('active');
         }
     },
