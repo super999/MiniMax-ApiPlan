@@ -19,8 +19,8 @@ class GenerationStatus(str, Enum):
 class GenerationType(str, Enum):
     OUTLINE = "outline"
     CHARACTERS = "characters"
-    CHAPTER = "chapter"
-    CONTENT = "content"
+    CHAPTER_OUTLINE = "chapter_outline"
+    CHAPTER_CONTENT = "chapter_content"
     FULL_WORK = "full_work"
 
 
@@ -74,6 +74,7 @@ class GenerationRecordBase(BaseModel):
 
 
 class GenerationRecordCreate(GenerationRecordBase):
+    project_id: int
     script_chapter_id: Optional[int] = None
     prompt: Optional[str] = None
     model_used: Optional[str] = None

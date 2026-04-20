@@ -422,6 +422,58 @@
     margin-top: 0.25rem;
 }
 
+/* 提示词查看按钮 */
+.prompt-view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+}
+
+.prompt-icon {
+    font-size: 1rem;
+}
+
+/* 提示词查看模态框 */
+.prompt-viewer-modal-content {
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.prompt-viewer-content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+}
+
+.prompt-viewer-description {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.prompt-viewer-template {
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    overflow-x: auto;
+}
+
+.prompt-viewer-template pre {
+    margin: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
 /* 响应式适配 */
 @media (max-width: 1024px) {
     .chapters-list-container {

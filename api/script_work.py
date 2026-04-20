@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,10 +6,13 @@ from pydantic import BaseModel, Field
 
 from core.logger import get_logger
 from core.deps import get_current_user
+from core.prompts import render_prompt, GenerationType as PromptGenerationType
 from db.session import get_async_session
 from db.crud.script_work import script_work_crud
 from db.crud.script_chapter import script_chapter_crud
 from db.crud.project import project_crud
+from db.crud.generation_record import generation_record_crud
+from clients.minimax_client import MiniMaxClient
 from db.models.user import User
 from db.models.script_work import (
     ScriptWork,
@@ -23,6 +27,12 @@ from db.models.script_chapter import (
     ScriptChapterUpdate,
     ScriptChapterResponse,
     ScriptChapterStatus,
+)
+from db.models.generation_record import (
+    GenerationType,
+    GenerationStatus,
+    GenerationRecordCreate,
+    GenerationRecordUpdate,
 )
 
 logger = get_logger(__name__)
@@ -83,6 +93,58 @@ class OutlineUpdateRequest(BaseModel):
 
 class CharactersUpdateRequest(BaseModel):
     characters: str
+
+
+class OutlineGenerateRequest(BaseModel):
+    temperature: Optional[float] = Field(default=0.7, ge=0.0, le=2.0)
+    max_tokens: Optional[int] = Field(default=4096, ge=1, le=8192)
+
+
+class OutlineGenerateResponse(BaseModel):
+    success: bool
+    content: Optional[str] = None
+    error: Optional[str] = None
+    generation_record_id: Optional[int] = None
+
+
+class CharactersGenerateRequest(BaseModel):
+    temperature: Optional[float] = Field(default=0.7, ge=0.0, le=2.0)
+    max_tokens: Optional[int] = Field(default=4096, ge=1, le=8192)
+
+
+class CharactersGenerateResponse(BaseModel):
+    success: bool
+    content: Optional[str] = None
+    error: Optional[str] = None
+    generation_record_id: Optional[int] = None
+
+
+class ChapterOutlineGenerateRequest(BaseModel):
+    temperature: Optional[float] = Field(default=0.7, ge=0.0, le=2.0)
+    max_tokens: Optional[int] = Field(default=4096, ge=1, le=8192)
+
+
+class ChapterOutlineGenerateResponse(BaseModel):
+    success: bool
+    content: Optional[str] = None
+    error: Optional[str] = None
+    generation_record_id: Optional[int] = None
+
+
+class ChapterContentGenerateRequest(BaseModel):
+    temperature: Optional[float] = Field(default=0.7, ge=0.0, le=2.0)
+    max_tokens: Optional[int] = Field(default=4096, ge=1, le=8192)
+    genre: Optional[str] = None
+    tone: Optional[str] = None
+    audience: Optional[str] = None
+    word_count: Optional[int] = None
+
+
+class ChapterContentGenerateResponse(BaseModel):
+    success: bool
+    content: Optional[str] = None
+    error: Optional[str] = None
+    generation_record_id: Optional[int] = None
 
 
 async def _validate_project_access(
@@ -580,3 +642,592 @@ async def delete_chapter(
         "message": f"章节 '{chapter.title}' 已删除",
         "chapter_id": chapter_id,
     }
+
+
+@router.post(
+    "/{script_work_id}/generate-outline",
+    response_model=OutlineGenerateResponse,
+    summary="AI 生成大纲",
+    responses={
+        200: {"description": "生成成功"},
+        401: {"description": "未授权，请先登录"},
+        404: {"description": "脚本作品不存在或无权限访问"},
+        500: {"description": "AI 生成失败"},
+    },
+)
+async def generate_outline(
+    script_work_id: int,
+    request: Optional[OutlineGenerateRequest] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+) -> OutlineGenerateResponse:
+    script_work = await _validate_script_work_access(db, script_work_id, current_user)
+
+    generation_record = None
+    started_at = datetime.utcnow()
+
+    try:
+        record_create = GenerationRecordCreate(
+            generation_type=GenerationType.OUTLINE,
+            script_work_id=script_work_id,
+            project_id=script_work.project_id,
+            prompt=None,
+        )
+        generation_record = await generation_record_crud.create(
+            db,
+            obj_in=record_create,
+            user_id=current_user.id,
+        )
+        logger.info(
+            f"用户 {current_user.username} 开始生成大纲，作品: {script_work_id}, 记录ID: {generation_record.id}"
+        )
+
+        prompt_context = {
+            "title": script_work.title or "",
+            "description": script_work.description or "",
+        }
+        prompt = render_prompt(PromptGenerationType.OUTLINE, prompt_context)
+
+        temperature = request.temperature if request else 0.7
+        max_tokens = request.max_tokens if request else 4096
+
+        async with MiniMaxClient() as client:
+            response, error, latency_ms = await client.chat(
+                prompt=prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        completed_at = datetime.utcnow()
+
+        if error or response is None:
+            error_msg = error.message if error else "AI 生成失败，无响应数据"
+            logger.error(f"大纲生成失败: {error_msg}, 记录ID: {generation_record.id}")
+
+            await generation_record_crud.update_status(
+                db,
+                record_id=generation_record.id,
+                status=GenerationStatus.FAILED,
+                user_id=current_user.id,
+                error_message=error_msg,
+            )
+
+            return OutlineGenerateResponse(
+                success=False,
+                error=error_msg,
+                generation_record_id=generation_record.id,
+            )
+
+        tokens_used = response.usage.total_tokens if response.usage else None
+
+        await generation_record_crud.update_status(
+            db,
+            record_id=generation_record.id,
+            status=GenerationStatus.COMPLETED,
+            user_id=current_user.id,
+            result=response.content,
+            tokens_used=tokens_used,
+        )
+
+        await generation_record_crud.update(
+            db,
+            db_obj=generation_record,
+            obj_in=GenerationRecordUpdate(
+                model_used=response.model,
+                started_at=started_at,
+                completed_at=completed_at,
+            ),
+            user_id=current_user.id,
+        )
+
+        logger.info(
+            f"大纲生成成功，作品: {script_work_id}, 记录ID: {generation_record.id}, "
+            f"模型: {response.model}, tokens: {tokens_used}, 耗时: {latency_ms:.2f}ms"
+        )
+
+        return OutlineGenerateResponse(
+            success=True,
+            content=response.content,
+            generation_record_id=generation_record.id,
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        error_msg = f"大纲生成过程中发生错误: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+
+        if generation_record:
+            await generation_record_crud.update_status(
+                db,
+                record_id=generation_record.id,
+                status=GenerationStatus.FAILED,
+                user_id=current_user.id,
+                error_message=error_msg,
+            )
+
+        return OutlineGenerateResponse(
+            success=False,
+            error=error_msg,
+            generation_record_id=generation_record.id if generation_record else None,
+        )
+
+
+@router.post(
+    "/{script_work_id}/generate-characters",
+    response_model=CharactersGenerateResponse,
+    summary="AI 生成人物设定",
+    responses={
+        200: {"description": "生成成功"},
+        400: {"description": "大纲为空，请先保存大纲"},
+        401: {"description": "未授权，请先登录"},
+        404: {"description": "脚本作品不存在或无权限访问"},
+        500: {"description": "AI 生成失败"},
+    },
+)
+async def generate_characters(
+    script_work_id: int,
+    request: Optional[CharactersGenerateRequest] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+) -> CharactersGenerateResponse:
+    script_work = await _validate_script_work_access(db, script_work_id, current_user)
+
+    if not script_work.outline or not script_work.outline.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请先保存大纲",
+        )
+
+    generation_record = None
+    started_at = datetime.utcnow()
+
+    try:
+        record_create = GenerationRecordCreate(
+            generation_type=GenerationType.CHARACTERS,
+            script_work_id=script_work_id,
+            project_id=script_work.project_id,
+            prompt=None,
+        )
+        generation_record = await generation_record_crud.create(
+            db,
+            obj_in=record_create,
+            user_id=current_user.id,
+        )
+        logger.info(
+            f"用户 {current_user.username} 开始生成人物设定，作品: {script_work_id}, 记录ID: {generation_record.id}"
+        )
+
+        prompt_context = {
+            "title": script_work.title or "",
+            "description": script_work.description or "",
+            "outline": script_work.outline or "",
+        }
+        prompt = render_prompt(PromptGenerationType.CHARACTERS, prompt_context)
+
+        temperature = request.temperature if request else 0.7
+        max_tokens = request.max_tokens if request else 4096
+
+        async with MiniMaxClient() as client:
+            response, error, latency_ms = await client.chat(
+                prompt=prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        completed_at = datetime.utcnow()
+
+        if error or response is None:
+            error_msg = error.message if error else "AI 生成失败，无响应数据"
+            logger.error(f"人物设定生成失败: {error_msg}, 记录ID: {generation_record.id}")
+
+            await generation_record_crud.update_status(
+                db,
+                record_id=generation_record.id,
+                status=GenerationStatus.FAILED,
+                user_id=current_user.id,
+                error_message=error_msg,
+            )
+
+            return CharactersGenerateResponse(
+                success=False,
+                error=error_msg,
+                generation_record_id=generation_record.id,
+            )
+
+        tokens_used = response.usage.total_tokens if response.usage else None
+
+        await generation_record_crud.update_status(
+            db,
+            record_id=generation_record.id,
+            status=GenerationStatus.COMPLETED,
+            user_id=current_user.id,
+            result=response.content,
+            tokens_used=tokens_used,
+        )
+
+        await generation_record_crud.update(
+            db,
+            db_obj=generation_record,
+            obj_in=GenerationRecordUpdate(
+                model_used=response.model,
+                started_at=started_at,
+                completed_at=completed_at,
+            ),
+            user_id=current_user.id,
+        )
+
+        logger.info(
+            f"人物设定生成成功，作品: {script_work_id}, 记录ID: {generation_record.id}, "
+            f"模型: {response.model}, tokens: {tokens_used}, 耗时: {latency_ms:.2f}ms"
+        )
+
+        return CharactersGenerateResponse(
+            success=True,
+            content=response.content,
+            generation_record_id=generation_record.id,
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        error_msg = f"人物设定生成过程中发生错误: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+
+        if generation_record:
+            await generation_record_crud.update_status(
+                db,
+                record_id=generation_record.id,
+                status=GenerationStatus.FAILED,
+                user_id=current_user.id,
+                error_message=error_msg,
+            )
+
+        return CharactersGenerateResponse(
+            success=False,
+            error=error_msg,
+            generation_record_id=generation_record.id if generation_record else None,
+        )
+
+
+@router.post(
+    "/{script_work_id}/chapters/{chapter_id}/generate-outline",
+    response_model=ChapterOutlineGenerateResponse,
+    summary="AI 生成本集大纲",
+    responses={
+        200: {"description": "生成成功"},
+        400: {"description": "作品大纲为空，请先保存大纲"},
+        401: {"description": "未授权，请先登录"},
+        404: {"description": "作品或章节不存在或无权限访问"},
+        500: {"description": "AI 生成失败"},
+    },
+)
+async def generate_chapter_outline(
+    script_work_id: int,
+    chapter_id: int,
+    request: Optional[ChapterOutlineGenerateRequest] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+) -> ChapterOutlineGenerateResponse:
+    script_work = await _validate_script_work_access(db, script_work_id, current_user)
+    chapter = await _validate_chapter_access(db, chapter_id, current_user)
+
+    if chapter.script_work_id != script_work_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="章节不属于该作品",
+        )
+
+    if not script_work.outline or not script_work.outline.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请先保存作品大纲",
+        )
+
+    chapters = await script_chapter_crud.get_by_script_work(
+        db,
+        script_work_id=script_work_id,
+        user_id=current_user.id,
+    )
+    total_chapters = len(chapters)
+
+    generation_record = None
+    started_at = datetime.utcnow()
+
+    try:
+        record_create = GenerationRecordCreate(
+            generation_type=GenerationType.CHAPTER_OUTLINE,
+            script_work_id=script_work_id,
+            script_chapter_id=chapter_id,
+            project_id=script_work.project_id,
+            prompt=None,
+        )
+        generation_record = await generation_record_crud.create(
+            db,
+            obj_in=record_create,
+            user_id=current_user.id,
+        )
+        logger.info(
+            f"用户 {current_user.username} 开始生成章节大纲，作品: {script_work_id}, "
+            f"章节: {chapter_id}, 记录ID: {generation_record.id}"
+        )
+
+        prompt_context = {
+            "outline": script_work.outline or "",
+            "characters": script_work.characters or "",
+            "chapter_title": chapter.title or "",
+            "chapter_number": chapter.chapter_number,
+            "total_chapters": total_chapters,
+        }
+        prompt = render_prompt(PromptGenerationType.CHAPTER_OUTLINE, prompt_context)
+
+        temperature = request.temperature if request else 0.7
+        max_tokens = request.max_tokens if request else 4096
+
+        async with MiniMaxClient() as client:
+            response, error, latency_ms = await client.chat(
+                prompt=prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        completed_at = datetime.utcnow()
+
+        if error or response is None:
+            error_msg = error.message if error else "AI 生成失败，无响应数据"
+            logger.error(f"章节大纲生成失败: {error_msg}, 记录ID: {generation_record.id}")
+
+            await generation_record_crud.update_status(
+                db,
+                record_id=generation_record.id,
+                status=GenerationStatus.FAILED,
+                user_id=current_user.id,
+                error_message=error_msg,
+            )
+
+            return ChapterOutlineGenerateResponse(
+                success=False,
+                error=error_msg,
+                generation_record_id=generation_record.id,
+            )
+
+        tokens_used = response.usage.total_tokens if response.usage else None
+
+        await generation_record_crud.update_status(
+            db,
+            record_id=generation_record.id,
+            status=GenerationStatus.COMPLETED,
+            user_id=current_user.id,
+            result=response.content,
+            tokens_used=tokens_used,
+        )
+
+        await generation_record_crud.update(
+            db,
+            db_obj=generation_record,
+            obj_in=GenerationRecordUpdate(
+                model_used=response.model,
+                started_at=started_at,
+                completed_at=completed_at,
+            ),
+            user_id=current_user.id,
+        )
+
+        logger.info(
+            f"章节大纲生成成功，作品: {script_work_id}, 章节: {chapter_id}, "
+            f"记录ID: {generation_record.id}, 模型: {response.model}, "
+            f"tokens: {tokens_used}, 耗时: {latency_ms:.2f}ms"
+        )
+
+        return ChapterOutlineGenerateResponse(
+            success=True,
+            content=response.content,
+            generation_record_id=generation_record.id,
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        error_msg = f"章节大纲生成过程中发生错误: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+
+        if generation_record:
+            await generation_record_crud.update_status(
+                db,
+                record_id=generation_record.id,
+                status=GenerationStatus.FAILED,
+                user_id=current_user.id,
+                error_message=error_msg,
+            )
+
+        return ChapterOutlineGenerateResponse(
+            success=False,
+            error=error_msg,
+            generation_record_id=generation_record.id if generation_record else None,
+        )
+
+
+@router.post(
+    "/{script_work_id}/chapters/{chapter_id}/generate-content",
+    response_model=ChapterContentGenerateResponse,
+    summary="AI 生成本集内容",
+    responses={
+        200: {"description": "生成成功"},
+        400: {"description": "作品大纲为空，请先保存大纲"},
+        401: {"description": "未授权，请先登录"},
+        404: {"description": "作品或章节不存在或无权限访问"},
+        500: {"description": "AI 生成失败"},
+    },
+)
+async def generate_chapter_content(
+    script_work_id: int,
+    chapter_id: int,
+    request: Optional[ChapterContentGenerateRequest] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+) -> ChapterContentGenerateResponse:
+    script_work = await _validate_script_work_access(db, script_work_id, current_user)
+    chapter = await _validate_chapter_access(db, chapter_id, current_user)
+
+    if chapter.script_work_id != script_work_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="章节不属于该作品",
+        )
+
+    if not script_work.outline or not script_work.outline.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请先保存作品大纲",
+        )
+
+    chapters = await script_chapter_crud.get_by_script_work(
+        db,
+        script_work_id=script_work_id,
+        user_id=current_user.id,
+    )
+    total_chapters = len(chapters)
+
+    generation_record = None
+    started_at = datetime.utcnow()
+
+    try:
+        record_create = GenerationRecordCreate(
+            generation_type=GenerationType.CHAPTER_CONTENT,
+            script_work_id=script_work_id,
+            script_chapter_id=chapter_id,
+            project_id=script_work.project_id,
+            prompt=None,
+        )
+        generation_record = await generation_record_crud.create(
+            db,
+            obj_in=record_create,
+            user_id=current_user.id,
+        )
+        logger.info(
+            f"用户 {current_user.username} 开始生成章节内容，作品: {script_work_id}, "
+            f"章节: {chapter_id}, 记录ID: {generation_record.id}"
+        )
+
+        prompt_context = {
+            "outline": script_work.outline or "",
+            "characters": script_work.characters or "",
+            "chapter_title": chapter.title or "",
+            "chapter_number": chapter.chapter_number,
+            "total_chapters": total_chapters,
+            "chapter_outline": chapter.outline or "",
+            "genre": request.genre if request and request.genre else "悬疑/甜宠/爽文/玄幻",
+            "tone": request.tone if request and request.tone else "轻松幽默/紧张刺激/深情虐恋",
+            "audience": request.audience if request and request.audience else "女性向/男性向/全年龄",
+            "word_count": request.word_count if request and request.word_count else "300-800字/集",
+        }
+        prompt = render_prompt(PromptGenerationType.CHAPTER_CONTENT, prompt_context)
+
+        temperature = request.temperature if request else 0.7
+        max_tokens = request.max_tokens if request else 4096
+
+        async with MiniMaxClient() as client:
+            response, error, latency_ms = await client.chat(
+                prompt=prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        completed_at = datetime.utcnow()
+
+        if error or response is None:
+            error_msg = error.message if error else "AI 生成失败，无响应数据"
+            logger.error(f"章节内容生成失败: {error_msg}, 记录ID: {generation_record.id}")
+
+            await generation_record_crud.update_status(
+                db,
+                record_id=generation_record.id,
+                status=GenerationStatus.FAILED,
+                user_id=current_user.id,
+                error_message=error_msg,
+            )
+
+            return ChapterContentGenerateResponse(
+                success=False,
+                error=error_msg,
+                generation_record_id=generation_record.id,
+            )
+
+        tokens_used = response.usage.total_tokens if response.usage else None
+
+        await generation_record_crud.update_status(
+            db,
+            record_id=generation_record.id,
+            status=GenerationStatus.COMPLETED,
+            user_id=current_user.id,
+            result=response.content,
+            tokens_used=tokens_used,
+        )
+
+        await generation_record_crud.update(
+            db,
+            db_obj=generation_record,
+            obj_in=GenerationRecordUpdate(
+                model_used=response.model,
+                started_at=started_at,
+                completed_at=completed_at,
+            ),
+            user_id=current_user.id,
+        )
+
+        logger.info(
+            f"章节内容生成成功，作品: {script_work_id}, 章节: {chapter_id}, "
+            f"记录ID: {generation_record.id}, 模型: {response.model}, "
+            f"tokens: {tokens_used}, 耗时: {latency_ms:.2f}ms"
+        )
+
+        return ChapterContentGenerateResponse(
+            success=True,
+            content=response.content,
+            generation_record_id=generation_record.id,
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        error_msg = f"章节内容生成过程中发生错误: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+
+        if generation_record:
+            await generation_record_crud.update_status(
+                db,
+                record_id=generation_record.id,
+                status=GenerationStatus.FAILED,
+                user_id=current_user.id,
+                error_message=error_msg,
+            )
+
+        return ChapterContentGenerateResponse(
+            success=False,
+            error=error_msg,
+            generation_record_id=generation_record.id if generation_record else None,
+        )
