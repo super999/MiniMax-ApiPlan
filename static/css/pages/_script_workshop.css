@@ -177,25 +177,6 @@
     flex-shrink: 0;
 }
 
-.editor-actions-floating {
-    position: absolute;
-    bottom: 1rem;
-    right: 1rem;
-    left: 1rem;
-    margin-top: 0;
-    padding: 0.75rem 1rem;
-    background: linear-gradient(to top, var(--bg-color), rgba(255, 255, 255, 0.95));
-    border-radius: var(--border-radius);
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
-    z-index: 10;
-}
-
-@media (prefers-color-scheme: dark) {
-    .editor-actions-floating {
-        background: linear-gradient(to top, var(--bg-color), rgba(30, 30, 30, 0.95));
-    }
-}
-
 .save-status {
     font-size: 0.875rem;
     color: var(--text-muted);
