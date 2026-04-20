@@ -58,6 +58,30 @@ const ScriptWorksModule = {
             saveOutlineBtn.addEventListener('click', () => this.saveOutline());
         }
 
+        // 生成大纲
+        const generateOutlineBtn = document.getElementById('generate-outline-btn');
+        if (generateOutlineBtn) {
+            generateOutlineBtn.addEventListener('click', () => this.generateOutline());
+        }
+
+        // 生成人物设定
+        const generateCharactersBtn = document.getElementById('generate-characters-btn');
+        if (generateCharactersBtn) {
+            generateCharactersBtn.addEventListener('click', () => this.generateCharacters());
+        }
+
+        // 生成本集大纲
+        const generateChapterOutlineBtn = document.getElementById('generate-chapter-outline-btn');
+        if (generateChapterOutlineBtn) {
+            generateChapterOutlineBtn.addEventListener('click', () => this.generateChapterOutline());
+        }
+
+        // 生成本集内容
+        const generateChapterContentBtn = document.getElementById('generate-chapter-content-btn');
+        if (generateChapterContentBtn) {
+            generateChapterContentBtn.addEventListener('click', () => this.generateChapterContent());
+        }
+
         // 保存人物设定
         const saveCharactersBtn = document.getElementById('save-characters-btn');
         if (saveCharactersBtn) {
@@ -97,6 +121,40 @@ const ScriptWorksModule = {
         const closeCreateChapter = document.getElementById('close-create-chapter');
         if (closeCreateChapter) {
             closeCreateChapter.addEventListener('click', () => this.closeCreateChapterModal());
+        }
+
+        const viewPromptOutlineBtn = document.getElementById('view-prompt-outline-btn');
+        if (viewPromptOutlineBtn) {
+            viewPromptOutlineBtn.addEventListener('click', () => this.showPromptViewer('outline'));
+        }
+
+        const viewPromptCharactersBtn = document.getElementById('view-prompt-characters-btn');
+        if (viewPromptCharactersBtn) {
+            viewPromptCharactersBtn.addEventListener('click', () => this.showPromptViewer('characters'));
+        }
+
+        const viewPromptChapterOutlineBtn = document.getElementById('view-prompt-chapter-outline-btn');
+        if (viewPromptChapterOutlineBtn) {
+            viewPromptChapterOutlineBtn.addEventListener('click', () => this.showPromptViewer('chapter_outline'));
+        }
+
+        const viewPromptChapterContentBtn = document.getElementById('view-prompt-chapter-content-btn');
+        if (viewPromptChapterContentBtn) {
+            viewPromptChapterContentBtn.addEventListener('click', () => this.showPromptViewer('chapter_content'));
+        }
+
+        const closePromptViewerBtn = document.getElementById('close-prompt-viewer');
+        if (closePromptViewerBtn) {
+            closePromptViewerBtn.addEventListener('click', () => this.closePromptViewer());
+        }
+
+        const promptViewerModal = document.getElementById('prompt-viewer-modal');
+        if (promptViewerModal) {
+            promptViewerModal.addEventListener('click', (e) => {
+                if (e.target === promptViewerModal) {
+                    this.closePromptViewer();
+                }
+            });
         }
     },
 
@@ -226,6 +284,18 @@ const ScriptWorksModule = {
                 this.chapters = data.chapters || [];
                 this.populateEditor(data);
                 this.showEditor();
+
+                // 启用大纲生成按钮
+                const generateOutlineBtn = document.getElementById('generate-outline-btn');
+                if (generateOutlineBtn) {
+                    generateOutlineBtn.disabled = false;
+                }
+
+                // 启用人物设定生成按钮
+                const generateCharactersBtn = document.getElementById('generate-characters-btn');
+                if (generateCharactersBtn) {
+                    generateCharactersBtn.disabled = false;
+                }
             }
         } catch (error) {
             console.error('加载脚本作品详情失败:', error);
@@ -333,6 +403,17 @@ const ScriptWorksModule = {
         document.getElementById('chapter-outline-editor').value = chapter.outline || '';
         document.getElementById('chapter-content-editor').value = chapter.content || '';
 
+        // 启用章节生成按钮
+        const generateChapterOutlineBtn = document.getElementById('generate-chapter-outline-btn');
+        if (generateChapterOutlineBtn) {
+            generateChapterOutlineBtn.disabled = false;
+        }
+
+        const generateChapterContentBtn = document.getElementById('generate-chapter-content-btn');
+        if (generateChapterContentBtn) {
+            generateChapterContentBtn.disabled = false;
+        }
+
         // 清除状态
         this.clearStatus('chapter');
     },
@@ -398,6 +479,258 @@ const ScriptWorksModule = {
             console.error('保存大纲失败:', error);
             this.showStatus('outline', '保存失败', 'error');
             showError('保存失败', '网络错误，请稍后重试');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+    },
+
+    // 生成大纲
+    async generateOutline() {
+        if (!this.currentScriptWorkId) {
+            showError('生成失败', '请先选择一个脚本作品');
+            return;
+        }
+
+        const submitBtn = document.getElementById('generate-outline-btn');
+        const originalText = submitBtn?.textContent;
+        const outlineEditor = document.getElementById('outline-editor');
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '生成中...';
+            }
+
+            this.showStatus('outline', '正在生成大纲...', 'info');
+
+            const response = await ApiService.request(
+                `/api/script-works/${this.currentScriptWorkId}/generate-outline`,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        temperature: 0.7,
+                        max_tokens: 4096
+                    })
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    if (outlineEditor && data.content) {
+                        outlineEditor.value = data.content;
+                    }
+                    
+                    this.showStatus('outline', '生成成功', 'success');
+                    showSuccess('生成成功', '大纲已生成，请审核后保存');
+                } else {
+                    this.showStatus('outline', '生成失败', 'error');
+                    showError('生成失败', data.error || '大纲生成失败');
+                }
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                this.showStatus('outline', '生成失败', 'error');
+                showError('生成失败', errorData.detail || '大纲生成失败');
+            }
+        } catch (error) {
+            console.error('生成大纲失败:', error);
+            this.showStatus('outline', '生成失败', 'error');
+            showError('生成失败', '网络错误，请稍后重试');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+    },
+
+    // 生成人物设定
+    async generateCharacters() {
+        if (!this.currentScriptWorkId) {
+            showError('生成失败', '请先选择一个脚本作品');
+            return;
+        }
+
+        const submitBtn = document.getElementById('generate-characters-btn');
+        const originalText = submitBtn?.textContent;
+        const charactersEditor = document.getElementById('characters-editor');
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '生成中...';
+            }
+
+            this.showStatus('characters', '正在生成人物设定...', 'info');
+
+            const response = await ApiService.request(
+                `/api/script-works/${this.currentScriptWorkId}/generate-characters`,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        temperature: 0.7,
+                        max_tokens: 4096
+                    })
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    if (charactersEditor && data.content) {
+                        charactersEditor.value = data.content;
+                    }
+                    
+                    this.showStatus('characters', '生成成功', 'success');
+                    showSuccess('生成成功', '人物设定已生成，请审核后保存');
+                } else {
+                    this.showStatus('characters', '生成失败', 'error');
+                    showError('生成失败', data.error || '人物设定生成失败');
+                }
+            } else if (response.status === 400) {
+                const errorData = await response.json().catch(() => ({}));
+                this.showStatus('characters', '生成失败', 'error');
+                showError('无法生成', errorData.detail || '请先保存大纲后再生成人物设定');
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                this.showStatus('characters', '生成失败', 'error');
+                showError('生成失败', errorData.detail || '人物设定生成失败');
+            }
+        } catch (error) {
+            console.error('生成人物设定失败:', error);
+            this.showStatus('characters', '生成失败', 'error');
+            showError('生成失败', '网络错误，请稍后重试');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+    },
+
+    // 生成本集大纲
+    async generateChapterOutline() {
+        if (!this.currentScriptWorkId || !this.currentChapterId) {
+            showError('生成失败', '请先选择一个章节');
+            return;
+        }
+
+        const submitBtn = document.getElementById('generate-chapter-outline-btn');
+        const originalText = submitBtn?.textContent;
+        const outlineEditor = document.getElementById('chapter-outline-editor');
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '生成中...';
+            }
+
+            this.showStatus('chapter', '正在生成本集大纲...', 'info');
+
+            const response = await ApiService.request(
+                `/api/script-works/${this.currentScriptWorkId}/chapters/${this.currentChapterId}/generate-outline`,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        temperature: 0.7,
+                        max_tokens: 4096
+                    })
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    if (outlineEditor && data.content) {
+                        outlineEditor.value = data.content;
+                    }
+                    
+                    this.showStatus('chapter', '生成成功', 'success');
+                    showSuccess('生成成功', '本集大纲已生成，请审核后保存');
+                } else {
+                    this.showStatus('chapter', '生成失败', 'error');
+                    showError('生成失败', data.error || '本集大纲生成失败');
+                }
+            } else if (response.status === 400) {
+                const errorData = await response.json().catch(() => ({}));
+                this.showStatus('chapter', '生成失败', 'error');
+                showError('无法生成', errorData.detail || '请先保存作品大纲后再生成');
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                this.showStatus('chapter', '生成失败', 'error');
+                showError('生成失败', errorData.detail || '本集大纲生成失败');
+            }
+        } catch (error) {
+            console.error('生成本集大纲失败:', error);
+            this.showStatus('chapter', '生成失败', 'error');
+            showError('生成失败', '网络错误，请稍后重试');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+    },
+
+    // 生成本集内容
+    async generateChapterContent() {
+        if (!this.currentScriptWorkId || !this.currentChapterId) {
+            showError('生成失败', '请先选择一个章节');
+            return;
+        }
+
+        const submitBtn = document.getElementById('generate-chapter-content-btn');
+        const originalText = submitBtn?.textContent;
+        const contentEditor = document.getElementById('chapter-content-editor');
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '生成中...';
+            }
+
+            this.showStatus('chapter', '正在生成本集内容...', 'info');
+
+            const response = await ApiService.request(
+                `/api/script-works/${this.currentScriptWorkId}/chapters/${this.currentChapterId}/generate-content`,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        temperature: 0.7,
+                        max_tokens: 4096
+                    })
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    if (contentEditor && data.content) {
+                        contentEditor.value = data.content;
+                    }
+                    
+                    this.showStatus('chapter', '生成成功', 'success');
+                    showSuccess('生成成功', '本集内容已生成，请审核后保存');
+                } else {
+                    this.showStatus('chapter', '生成失败', 'error');
+                    showError('生成失败', data.error || '本集内容生成失败');
+                }
+            } else if (response.status === 400) {
+                const errorData = await response.json().catch(() => ({}));
+                this.showStatus('chapter', '生成失败', 'error');
+                showError('无法生成', errorData.detail || '请先保存作品大纲后再生成');
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                this.showStatus('chapter', '生成失败', 'error');
+                showError('生成失败', errorData.detail || '本集内容生成失败');
+            }
+        } catch (error) {
+            console.error('生成本集内容失败:', error);
+            this.showStatus('chapter', '生成失败', 'error');
+            showError('生成失败', '网络错误，请稍后重试');
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
@@ -927,6 +1260,72 @@ const ScriptWorksModule = {
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
             }
+        }
+    },
+
+    async showPromptViewer(type) {
+        const modal = document.getElementById('prompt-viewer-modal');
+        const titleEl = document.getElementById('prompt-viewer-title');
+        const descEl = document.getElementById('prompt-viewer-description');
+        const templateEl = document.getElementById('prompt-viewer-template-content');
+
+        const typeTitles = {
+            'outline': '故事大纲 - 提示词模板',
+            'characters': '人物设定 - 提示词模板',
+            'chapter_outline': '本集大纲 - 提示词模板',
+            'chapter_content': '本集内容 - 提示词模板'
+        };
+
+        try {
+            if (modal) {
+                modal.style.display = 'block';
+                document.getElementById('modal-overlay')?.classList.add('active');
+            }
+            if (titleEl) {
+                titleEl.textContent = typeTitles[type] || '提示词模板';
+            }
+            if (descEl) {
+                descEl.textContent = '正在加载...';
+            }
+            if (templateEl) {
+                templateEl.textContent = '';
+            }
+
+            const response = await ApiService.get(`/api/prompts?type=${type}`);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    if (descEl) {
+                        descEl.textContent = data.description || '';
+                    }
+                    if (templateEl) {
+                        templateEl.textContent = data.template || '';
+                    }
+                } else {
+                    if (descEl) {
+                        descEl.textContent = '获取失败: ' + (data.error || '未知错误');
+                    }
+                }
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                if (descEl) {
+                    descEl.textContent = '获取失败: ' + (errorData.detail || '网络错误');
+                }
+            }
+        } catch (error) {
+            console.error('获取提示词模板失败:', error);
+            if (descEl) {
+                descEl.textContent = '获取失败: 网络错误，请稍后重试';
+            }
+        }
+    },
+
+    closePromptViewer() {
+        const modal = document.getElementById('prompt-viewer-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.getElementById('modal-overlay')?.classList.remove('active');
         }
     },
 

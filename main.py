@@ -16,6 +16,7 @@ from api.health import router as health_router
 from api.auth import router as auth_router
 from api.project import router as project_router
 from api.script_work import router as script_work_router
+from api.prompts import router as prompts_router
 
 logger = setup_logger()
 app_logger = get_logger(__name__)
@@ -91,6 +92,7 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(project_router)
 app.include_router(script_work_router)
+app.include_router(prompts_router)
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

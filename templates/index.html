@@ -328,6 +328,9 @@
                                         <button id="generate-outline-btn" class="btn-secondary btn-sm ai-btn" disabled>
                                             <span class="ai-icon">🤖</span> 自动生成大纲
                                         </button>
+                                        <button id="view-prompt-outline-btn" class="btn-secondary btn-sm prompt-view-btn" title="查看提示词模板">
+                                            <span class="prompt-icon">📝</span>
+                                        </button>
                                     </div>
                                 </div>
                                 <div class="editor-section">
@@ -351,6 +354,9 @@
                                     <div class="section-actions">
                                         <button id="generate-characters-btn" class="btn-secondary btn-sm ai-btn" disabled>
                                             <span class="ai-icon">🤖</span> 自动生成人物设定
+                                        </button>
+                                        <button id="view-prompt-characters-btn" class="btn-secondary btn-sm prompt-view-btn" title="查看提示词模板">
+                                            <span class="prompt-icon">📝</span>
                                         </button>
                                     </div>
                                 </div>
@@ -404,8 +410,14 @@
                                                 <button id="generate-chapter-outline-btn" class="btn-secondary btn-sm ai-btn" disabled>
                                                     <span class="ai-icon">🤖</span> 生成本集大纲
                                                 </button>
+                                                <button id="view-prompt-chapter-outline-btn" class="btn-secondary btn-sm prompt-view-btn" title="查看提示词模板">
+                                                    <span class="prompt-icon">📝</span>
+                                                </button>
                                                 <button id="generate-chapter-content-btn" class="btn-secondary btn-sm ai-btn" disabled>
                                                     <span class="ai-icon">🤖</span> 生成本集内容
+                                                </button>
+                                                <button id="view-prompt-chapter-content-btn" class="btn-secondary btn-sm prompt-view-btn" title="查看提示词模板">
+                                                    <span class="prompt-icon">📝</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -660,6 +672,21 @@
                     已有账号？<a href="#" id="switch-to-login">立即登录</a>
                 </p>
             </form>
+        </div>
+    </div>
+
+    <div id="prompt-viewer-modal" class="modal" style="display: none;">
+        <div class="modal-content prompt-viewer-modal-content">
+            <div class="modal-header">
+                <h3 id="prompt-viewer-title">提示词模板</h3>
+                <button class="modal-close" id="close-prompt-viewer">&times;</button>
+            </div>
+            <div class="prompt-viewer-content">
+                <div class="prompt-viewer-description" id="prompt-viewer-description"></div>
+                <div class="prompt-viewer-template">
+                    <pre id="prompt-viewer-template-content"></pre>
+                </div>
+            </div>
         </div>
     </div>
 
